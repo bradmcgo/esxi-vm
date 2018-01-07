@@ -1,1 +1,3 @@
-esxi_vm_functions.pyc
+*.pyc
+.python-version
+.idea

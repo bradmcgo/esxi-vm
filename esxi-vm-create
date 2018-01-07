@@ -2,13 +2,9 @@
 
 
 import argparse                   # Argument parser
-import datetime                   # For current Date/Time
-import os.path                    # To check if file exists
 import sys                        # For args
 import re                         # For regex
 import paramiko                   # For remote ssh
-import yaml
-import warnings
 
 from esxi_vm_functions import *
 
@@ -20,8 +16,10 @@ isDryRun = ConfigData['isDryRun']
 isVerbose = ConfigData['isVerbose']
 isSummary = ConfigData['isSummary']
 HOST = ConfigData['HOST']
+PORT = ConfigData['PORT']
 USER = ConfigData['USER']
 PASSWORD = ConfigData['PASSWORD']
+KEY = ConfigData['KEY']
 CPU = ConfigData['CPU']
 MEM = ConfigData['MEM']
 HDISK = int(ConfigData['HDISK'])
@@ -50,8 +48,10 @@ parser = argparse.ArgumentParser(description='ESXi Create VM utility.')
 
 parser.add_argument('-d', '--dry', dest='isDryRunarg', action='store_true', help="Enable Dry Run mode  (" + str(isDryRun) + ")")
 parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (" + str(HOST) + ")")
+parser.add_argument("-T", "--Port", dest='PORT', type=str, help="ESXi Port number  (" + str(PORT) + ")")
 parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
 parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password  (*****)")
+parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key")
 parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name")
 parser.add_argument("-c", "--cpu", dest='CPU', type=int, help="Number of vCPUS  (" + str(CPU) + ")")
 parser.add_argument("-m", "--mem", type=int, help="Memory in GB  (" + str(MEM) + ")")
@@ -77,11 +77,15 @@ if args.isVerbosearg:
 if args.isSummaryarg:
     isSummary = True
 if args.HOST:
-   HOST=args.HOST
+    HOST=args.HOST
+if args.PORT:
+    PORT=args.PORT
 if args.USER:
     USER=args.USER
 if args.PASSWORD:
     PASSWORD=args.PASSWORD
+if args.KEY:
+    KEY=args.KEY
 if args.NAME:
     NAME=args.NAME
 if args.CPU:
@@ -114,8 +118,10 @@ if args.UPDATE:
     ConfigData['isVerbose'] = isVerbose
     ConfigData['isSummary'] = isSummary
     ConfigData['HOST'] = HOST
+    ConfigData['PORT'] = PORT
     ConfigData['USER'] = USER
     ConfigData['PASSWORD'] = PASSWORD
+    ConfigData['KEY'] = KEY
     ConfigData['CPU'] = CPU
     ConfigData['MEM'] = MEM
     ConfigData['HDISK'] = HDISK
@@ -143,16 +149,16 @@ if NAME == "":
 try:
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, username=USER, password=PASSWORD)
+    ssh.connect(HOST, port=PORT, username=USER, password=PASSWORD, key_filename=KEY)
 
     (stdin, stdout, stderr) = ssh.exec_command("esxcli system version get |grep Version")
     type(stdin)
     if re.match("Version", str(stdout.readlines())) is not None:
-        print "Unable to determine if this is a ESXi Host: %s, username: %s" % (HOST, USER)
+        print "Unable to determine if this is a ESXi Host: %s, port: %s, username: %s" % (HOST, PORT, USER)
         sys.exit(1)
 except:
     print "The Error is " + str(sys.exc_info()[0])
-    print "Unable to access ESXi Host: %s, username: %s" % (HOST, USER)
+    print "Unable to access ESXi Host: %s, port: %s, username: %s" % (HOST, PORT, USER)
     sys.exit(1)
 
 #
@@ -447,6 +453,7 @@ if not isDryRun and not CheckHasErrors:
 #
 #   The output log string
 LogOutput += '"Host":"' + HOST + '",'
+LogOutput += '"Port":"' + PORT + '",'
 LogOutput += '"Name":"' + NAME + '",'
 LogOutput += '"CPU":"' + str(CPU) + '",'
 LogOutput += '"Mem":"' + str(MEM) + '",'
@@ -482,6 +489,7 @@ if isSummary:
 
     if isVerbose:
         print "ESXi Host: " + HOST
+        print "ESXi Port: " + PORT
     print "VM NAME: " + NAME
     print "vCPU: " + str(CPU)
     print "Memory: " + str(MEM) + "GB"

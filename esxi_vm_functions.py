@@ -1,7 +1,6 @@
 import os.path
 import yaml
 import datetime                   # For current Date/Time
-import paramiko                   # For remote ssh
 from math import log
 
 
@@ -31,10 +30,12 @@ def setup_config():
         #  Enable/Disable exit summary by default
         isSummary=False,
 
-        #  ESXi host/IP, root login & password
+        #  ESXi host/IP, port, root login & password
         HOST="esxi",
+        PORT=22,
         USER="root",
         PASSWORD="",
+        KEY="",
 
         #  Default number of vCPU's, GB Mem, & GB boot disk
         CPU=2,
