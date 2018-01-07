@@ -51,7 +51,7 @@ parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (
 parser.add_argument("-T", "--Port", dest='PORT', type=str, help="ESXi Port number  (" + str(PORT) + ")")
 parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
 parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password  (*****)")
-parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key")
+parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key (path to private key)")
 parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name")
 parser.add_argument("-c", "--cpu", dest='CPU', type=int, help="Number of vCPUS  (" + str(CPU) + ")")
 parser.add_argument("-m", "--mem", type=int, help="Memory in GB  (" + str(MEM) + ")")
