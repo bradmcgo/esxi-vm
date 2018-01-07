@@ -37,8 +37,8 @@ GeneratedMAC = ""
 ISOfound = False
 CheckHasErrors = False
 LeastUsedDS = ""
-DSPATH=""
-DSSTORE=""
+DSPATH = ""
+DSSTORE = ""
 FullPathExists = False
 
 #
@@ -48,7 +48,7 @@ parser = argparse.ArgumentParser(description='ESXi Create VM utility.')
 
 parser.add_argument('-d', '--dry', dest='isDryRunarg', action='store_true', help="Enable Dry Run mode  (" + str(isDryRun) + ")")
 parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (" + str(HOST) + ")")
-parser.add_argument("-T", "--Port", dest='PORT', type=str, help="ESXi Port number  (" + str(PORT) + ")")
+parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number  (" + str(PORT) + ")")
 parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
 parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password  (*****)")
 parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key (path to private key)")
@@ -59,13 +59,13 @@ parser.add_argument("-v", "--vdisk", dest='HDISK', type=str, help="Size of virt 
 parser.add_argument("-i", "--iso", dest='ISO', type=str, help="CDROM ISO Path | None  (" + str(ISO) + ")")
 parser.add_argument("-N", "--net", dest='NET', type=str, help="Network Interface | None  (" + str(NET) + ")")
 parser.add_argument("-M", "--mac", dest='MAC', type=str, help="MAC address")
-parser.add_argument("-S", "--store", dest='STORE', type=str, help="vmfs Store | LeastUsed  ("  + str(STORE) + ")")
+parser.add_argument("-S", "--store", dest='STORE', type=str, help="vmfs Store | LeastUsed  (" + str(STORE) + ")")
 parser.add_argument("-g", "--guestos", dest='GUESTOS', type=str, help="Guest OS. (" + str(GUESTOS) + ")")
 parser.add_argument("-o", "--options", dest='VMXOPTS', type=str, default='NIL', help="Comma list of VMX Options.")
 parser.add_argument('-V', '--verbose', dest='isVerbosearg', action='store_true', help="Enable Verbose mode  (" + str(isVerbose) + ")")
 parser.add_argument('--summary', dest='isSummaryarg', action='store_true', help="Display Summary  (" + str(isSummary) + ")")
 parser.add_argument("-u", "--updateDefaults", dest='UPDATE', action='store_true', help="Update Default VM settings stored in ~/.esxi-vm.yml")
-#parser.add_argument("--showDefaults", dest='SHOW', action='store_true', help="Show Default VM settings stored in ~/.esxi-vm.yml")
+# parser.add_argument("--showDefaults", dest='SHOW', action='store_true', help="Show Default VM settings stored in ~/.esxi-vm.yml")
 
 
 args = parser.parse_args()
@@ -107,9 +107,9 @@ if STORE == "":
 if args.GUESTOS:
     GUESTOS=args.GUESTOS
 if args.VMXOPTS == '' and VMXOPTS != '':
-    VMXOPTS=''
+    VMXOPTS = ''
 if args.VMXOPTS and args.VMXOPTS != 'NIL':
-    VMXOPTS=args.VMXOPTS.split(",")
+    VMXOPTS = args.VMXOPTS.split(",")
 
 
 if args.UPDATE:
@@ -320,80 +320,80 @@ except:
 #
 #      Create the VM
 #
-VMX = []
-VMX.append('config.version = "8"')
-VMX.append('virtualHW.version = "8"')
-VMX.append('vmci0.present = "TRUE"')
-VMX.append('displayName = "' + NAME + '"')
-VMX.append('floppy0.present = "FALSE"')
-VMX.append('numvcpus = "' + str(CPU) + '"')
-VMX.append('scsi0.present = "TRUE"')
-VMX.append('scsi0.sharedBus = "none"')
-VMX.append('scsi0.virtualDev = "pvscsi"')
-VMX.append('memsize = "' + str(MEM * 1024) + '"')
-VMX.append('scsi0:0.present = "TRUE"')
-VMX.append('scsi0:0.fileName = "' + NAME + '.vmdk"')
-VMX.append('scsi0:0.deviceType = "scsi-hardDisk"')
+vmx = []
+vmx.append('config.version = "8"')
+vmx.append('virtualHW.version = "8"')
+vmx.append('vmci0.present = "TRUE"')
+vmx.append('displayName = "' + NAME + '"')
+vmx.append('floppy0.present = "FALSE"')
+vmx.append('numvcpus = "' + str(CPU) + '"')
+vmx.append('scsi0.present = "TRUE"')
+vmx.append('scsi0.sharedBus = "none"')
+vmx.append('scsi0.virtualDev = "pvscsi"')
+vmx.append('memsize = "' + str(MEM * 1024) + '"')
+vmx.append('scsi0:0.present = "TRUE"')
+vmx.append('scsi0:0.fileName = "' + NAME + '.vmdk"')
+vmx.append('scsi0:0.deviceType = "scsi-hardDisk"')
 if ISO == "":
-    VMX.append('ide1:0.present = "TRUE"')
-    VMX.append('ide1:0.fileName = "emptyBackingString"')
-    VMX.append('ide1:0.deviceType = "atapi-cdrom"')
-    VMX.append('ide1:0.startConnected = "FALSE"')
-    VMX.append('ide1:0.clientDevice = "TRUE"')
+    vmx.append('ide1:0.present = "TRUE"')
+    vmx.append('ide1:0.fileName = "emptyBackingString"')
+    vmx.append('ide1:0.deviceType = "atapi-cdrom"')
+    vmx.append('ide1:0.startConnected = "FALSE"')
+    vmx.append('ide1:0.clientDevice = "TRUE"')
 else:
-    VMX.append('ide1:0.present = "TRUE"')
-    VMX.append('ide1:0.fileName = "' + ISO + '"')
-    VMX.append('ide1:0.deviceType = "cdrom-image"')
-VMX.append('pciBridge0.present = "TRUE"')
-VMX.append('pciBridge4.present = "TRUE"')
-VMX.append('pciBridge4.virtualDev = "pcieRootPort"')
-VMX.append('pciBridge4.functions = "8"')
-VMX.append('pciBridge5.present = "TRUE"')
-VMX.append('pciBridge5.virtualDev = "pcieRootPort"')
-VMX.append('pciBridge5.functions = "8"')
-VMX.append('pciBridge6.present = "TRUE"')
-VMX.append('pciBridge6.virtualDev = "pcieRootPort"')
-VMX.append('pciBridge6.functions = "8"')
-VMX.append('pciBridge7.present = "TRUE"')
-VMX.append('pciBridge7.virtualDev = "pcieRootPort"')
-VMX.append('pciBridge7.functions = "8"')
-VMX.append('guestOS = "' + GUESTOS + '"')
+    vmx.append('ide1:0.present = "TRUE"')
+    vmx.append('ide1:0.fileName = "' + ISO + '"')
+    vmx.append('ide1:0.deviceType = "cdrom-image"')
+vmx.append('pciBridge0.present = "TRUE"')
+vmx.append('pciBridge4.present = "TRUE"')
+vmx.append('pciBridge4.virtualDev = "pcieRootPort"')
+vmx.append('pciBridge4.functions = "8"')
+vmx.append('pciBridge5.present = "TRUE"')
+vmx.append('pciBridge5.virtualDev = "pcieRootPort"')
+vmx.append('pciBridge5.functions = "8"')
+vmx.append('pciBridge6.present = "TRUE"')
+vmx.append('pciBridge6.virtualDev = "pcieRootPort"')
+vmx.append('pciBridge6.functions = "8"')
+vmx.append('pciBridge7.present = "TRUE"')
+vmx.append('pciBridge7.virtualDev = "pcieRootPort"')
+vmx.append('pciBridge7.functions = "8"')
+vmx.append('guestOS = "' + GUESTOS + '"')
 if NET != "None":
-    VMX.append('ethernet0.virtualDev = "vmxnet3"')
-    VMX.append('ethernet0.present = "TRUE"')
-    VMX.append('ethernet0.networkName = "' + NET + '"')
+    vmx.append('ethernet0.virtualDev = "vmxnet3"')
+    vmx.append('ethernet0.present = "TRUE"')
+    vmx.append('ethernet0.networkName = "' + NET + '"')
     if MAC == "":
-        VMX.append('ethernet0.addressType = "generated"')
+        vmx.append('ethernet0.addressType = "generated"')
     else:
-        VMX.append('ethernet0.addressType = "static"')
-        VMX.append('ethernet0.address = "' + MAC + '"')
+        vmx.append('ethernet0.addressType = "static"')
+        vmx.append('ethernet0.address = "' + MAC + '"')
 
 #
 #   Merge extra VMX options
 for VMXopt in VMXOPTS:
     try:
-        k,v = VMXopt.split("=")
+        k, v = VMXopt.split("=")
     except:
-        k=""
-        v=""
+        k = ""
+        v = ""
     key = k.lstrip().strip()
     value = v.lstrip().strip()
-    for i in VMX:
+    for i in vmx:
         try:
-            ikey,ivalue = i.split("=")
+            ikey, ivalue = i.split("=")
         except:
             break
         if ikey.lstrip().strip().lower() == key.lower():
-            index = VMX.index(i)
-            VMX[index] = ikey + " = " + value
+            index = vmx.index(i)
+            vmx[index] = ikey + " = " + value
             break
     else:
         if key != '' and value != '':
-            VMX.append(key + " = " + value)
+            vmx.append(key + " = " + value)
 
 if isVerbose and VMXOPTS != '':
     print "VMX file:"
-    for i in VMX:
+    for i in vmx:
         print i
 
 MyVM = FullPath + "/" + NAME
@@ -410,8 +410,8 @@ if not isDryRun and not CheckHasErrors:
             print "Create " + NAME + ".vmx file"
         (stdin, stdout, stderr) = ssh.exec_command("mkdir " + FullPath )
         type(stdin)
-        for line in VMX:
-            (stdin, stdout, stderr) = ssh.exec_command("echo " + line + " >>" + MyVM + ".vmx")
+        for line in vmx:
+            (stdin, stdout, stderr) = ssh.exec_command("echo '" + line + "' >>" + MyVM + ".vmx")
             type(stdin)
 
         # Create vmdk
@@ -433,7 +433,7 @@ if not isDryRun and not CheckHasErrors:
         (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.on " + str(VMID))
         type(stdin)
         if stderr.readlines():
-            print "Error Power.on VM."
+            print "Error Powering-on VM."
             Result="Fail"
 
         # Get Generated MAC
@@ -453,7 +453,7 @@ if not isDryRun and not CheckHasErrors:
 #
 #   The output log string
 LogOutput += '"Host":"' + HOST + '",'
-LogOutput += '"Port":"' + PORT + '",'
+LogOutput += '"Port":"' + str(PORT) + '",'
 LogOutput += '"Name":"' + NAME + '",'
 LogOutput += '"CPU":"' + str(CPU) + '",'
 LogOutput += '"Mem":"' + str(MEM) + '",'
