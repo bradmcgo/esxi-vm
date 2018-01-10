@@ -2,7 +2,6 @@
 
 
 import argparse                   # Argument parser
-import sys                        # For args
 import re                         # For regex
 import paramiko                   # For remote ssh
 
@@ -46,7 +45,8 @@ FullPathExists = False
 #
 parser = argparse.ArgumentParser(description='ESXi Create VM utility.')
 
-parser.add_argument('-d', '--dry', dest='isDryRunarg', action='store_true', help="Enable Dry Run mode  (" + str(isDryRun) + ")")
+parser.add_argument('-d', '--dry', dest='isDryRunarg', action='store_true',
+                    help="Enable Dry Run mode  (" + str(isDryRun) + ")")
 parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (" + str(HOST) + ")")
 parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number  (" + str(PORT) + ")")
 parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
@@ -62,10 +62,12 @@ parser.add_argument("-M", "--mac", dest='MAC', type=str, help="MAC address")
 parser.add_argument("-S", "--store", dest='STORE', type=str, help="vmfs Store | LeastUsed  (" + str(STORE) + ")")
 parser.add_argument("-g", "--guestos", dest='GUESTOS', type=str, help="Guest OS. (" + str(GUESTOS) + ")")
 parser.add_argument("-o", "--options", dest='VMXOPTS', type=str, default='NIL', help="Comma list of VMX Options.")
-parser.add_argument('-V', '--verbose', dest='isVerbosearg', action='store_true', help="Enable Verbose mode  (" + str(isVerbose) + ")")
-parser.add_argument('--summary', dest='isSummaryarg', action='store_true', help="Display Summary  (" + str(isSummary) + ")")
-parser.add_argument("-u", "--updateDefaults", dest='UPDATE', action='store_true', help="Update Default VM settings stored in ~/.esxi-vm.yml")
-# parser.add_argument("--showDefaults", dest='SHOW', action='store_true', help="Show Default VM settings stored in ~/.esxi-vm.yml")
+parser.add_argument('-V', '--verbose', dest='isVerbosearg', action='store_true',
+                    help="Enable Verbose mode  (" + str(isVerbose) + ")")
+parser.add_argument('--summary', dest='isSummaryarg', action='store_true',
+                    help="Display Summary  (" + str(isSummary) + ")")
+parser.add_argument("-u", "--updateDefaults", dest='UPDATE', action='store_true',
+                    help="Update Default VM settings stored in ~/.esxi-vm.yml")
 
 
 args = parser.parse_args()
@@ -77,35 +79,35 @@ if args.isVerbosearg:
 if args.isSummaryarg:
     isSummary = True
 if args.HOST:
-    HOST=args.HOST
+    HOST = args.HOST
 if args.PORT:
-    PORT=args.PORT
+    PORT = args.PORT
 if args.USER:
-    USER=args.USER
+    USER = args.USER
 if args.PASSWORD:
-    PASSWORD=args.PASSWORD
+    PASSWORD = args.PASSWORD
 if args.KEY:
-    KEY=args.KEY
+    KEY = args.KEY
 if args.NAME:
-    NAME=args.NAME
+    NAME = args.NAME
 if args.CPU:
-    CPU=int(args.CPU)
+    CPU = int(args.CPU)
 if args.mem:
-    MEM=int(args.mem)
+    MEM = int(args.mem)
 if args.HDISK:
-    HDISK=int(args.HDISK)
+    HDISK = int(args.HDISK)
 if args.ISO:
-    ISO=args.ISO
+    ISO = args.ISO
 if args.NET:
-    NET=args.NET
+    NET = args.NET
 if args.MAC:
-    MAC=args.MAC
+    MAC = args.MAC
 if args.STORE:
-    STORE=args.STORE
+    STORE = args.STORE
 if STORE == "":
     STORE = "LeastUsed"
 if args.GUESTOS:
-    GUESTOS=args.GUESTOS
+    GUESTOS = args.GUESTOS
 if args.VMXOPTS == '' and VMXOPTS != '':
     VMXOPTS = ''
 if args.VMXOPTS and args.VMXOPTS != 'NIL':
@@ -132,7 +134,7 @@ if args.UPDATE:
     ConfigData['ISO'] = ISO
     ConfigData['GUESTOS'] = GUESTOS
     ConfigData['VMXOPTS'] = VMXOPTS
-    SaveConfig(ConfigData)
+    save_config(ConfigData)
     if NAME == "":
         sys.exit(0)
 
@@ -140,7 +142,7 @@ if args.UPDATE:
 #      main()
 #
 LogOutput = '{'
-LogOutput += '"datetime":"' + str(theCurrDateTime()) + '",'
+LogOutput += '"datetime":"' + str(the_current_date_time()) + '",'
 
 if NAME == "":
     print "ERROR: Missing required option --name"
@@ -165,7 +167,8 @@ except:
 #      Get list of DataStores, store in VOLUMES
 #
 try:
-    (stdin, stdout, stderr) = ssh.exec_command("esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7")
+    (stdin, stdout, stderr) = \
+        ssh.exec_command("esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7")
     type(stdin)
     VOLUMES = {}
     for line in stdout.readlines():
@@ -184,7 +187,8 @@ if STORE == "LeastUsed":
 #      Get list of Networks available, store in VMNICS
 #
 try:
-    (stdin, stdout, stderr) = ssh.exec_command("esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'")
+    (stdin, stdout, stderr) = \
+        ssh.exec_command("esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'")
     type(stdin)
     VMNICS = []
     for line in stdout.readlines():
@@ -202,9 +206,9 @@ if MAC != "":
     MACregex = '^([a-fA-F0-9]{2}[:|\-]){5}[a-fA-F0-9]{2}$'
     if re.compile(MACregex).search(MAC):
         # Full MAC found. OK
-        MAC = MAC.replace("-",":")
+        MAC = MAC.replace("-", ":")
     elif re.compile(MACregex).search("00:50:56:" + MAC):
-        MAC="00:50:56:" + MAC.replace("-",":")
+        MAC = "00:50:56:" + MAC.replace("-", ":")
     else:
         print "ERROR: " + MAC + " Invalid MAC address."
         ErrorMessages += " " + MAC + " Invalid MAC address."
@@ -221,7 +225,8 @@ if ISO != "":
     try:
         #  If ISO has no "/", try to find the ISO
         if not re.match('/', ISO):
-            (stdin, stdout, stderr) = ssh.exec_command("find /vmfs/volumes/ -type f -name " + ISO + " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;")
+            (stdin, stdout, stderr) = ssh.exec_command("find /vmfs/volumes/ -type f -name " + ISO +
+                                                       " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;")
             type(stdin)
             FoundISOPath = str(stdout.readlines()[0]).strip('\n')
             if isVerbose:
@@ -408,7 +413,7 @@ if not isDryRun and not CheckHasErrors:
         # Create NAME.vmx
         if isVerbose:
             print "Create " + NAME + ".vmx file"
-        (stdin, stdout, stderr) = ssh.exec_command("mkdir " + FullPath )
+        (stdin, stdout, stderr) = ssh.exec_command("mkdir " + FullPath)
         type(stdin)
         for line in vmx:
             (stdin, stdout, stderr) = ssh.exec_command("echo '" + line + "' >>" + MyVM + ".vmx")
@@ -417,7 +422,8 @@ if not isDryRun and not CheckHasErrors:
         # Create vmdk
         if isVerbose:
             print "Create " + NAME + ".vmdk file"
-        (stdin, stdout, stderr) = ssh.exec_command("vmkfstools -c " + str(HDISK) + "G -d " + DISKFORMAT + " " + MyVM + ".vmdk")
+        (stdin, stdout, stderr) = \
+            ssh.exec_command("vmkfstools -c " + str(HDISK) + "G -d " + DISKFORMAT + " " + MyVM + ".vmdk")
         type(stdin)
 
         # Register VM
@@ -434,7 +440,7 @@ if not isDryRun and not CheckHasErrors:
         type(stdin)
         if stderr.readlines():
             print "Error Powering-on VM."
-            Result="Fail"
+            Result = "Fail"
 
         # Get Generated MAC
         if NET != "None":
@@ -473,7 +479,7 @@ LogOutput += '"Verbose":"' + str(isVerbose) + '",'
 if ErrorMessages != "":
     LogOutput += '"Error Message":"' + ErrorMessages + '",'
 LogOutput += '"Result":"' + Result + '",'
-LogOutput += '"Completion Time":"' + str(theCurrDateTime()) + '"'
+LogOutput += '"Completion Time":"' + str(the_current_date_time()) + '"'
 LogOutput += '}\n'
 try:
     with open(LOG, "a+w") as FD:
