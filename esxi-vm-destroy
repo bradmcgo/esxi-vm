@@ -152,7 +152,7 @@ if not CheckHasErrors:
         for i in range(0, 10):
             if isVerbose:
                 print("Get state of VM")
-            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate ".format((VMID)))
+            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate {}".format(VMID))
             type(stdin)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
@@ -179,9 +179,9 @@ if not CheckHasErrors:
         if isVerbose:
             print("destroy: {}".format(lines))
 
-    except:
-        print("There was an error destroying the VM.")
-        ErrorMessages += " There was an error destroying the VM."
+    except Exception as e:
+        print("There was an error destroying the VM: {}".format(e))
+        ErrorMessages += " There was an error destroying the VM: {}".format(e)
         CheckHasErrors = True
         Result = "Fail"
 

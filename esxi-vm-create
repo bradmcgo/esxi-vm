@@ -6,7 +6,7 @@ import paramiko                   # For remote ssh
 
 from esxi_vm_functions import *
 
-#      Defaults and Variable setup
+# Defaults and Variable setup
 ConfigData = setup_config()
 NAME = ""
 LOG = ConfigData['LOG']
@@ -157,14 +157,11 @@ try:
     if re.match("Version", str(stdout.readlines())) is not None:
         print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
         sys.exit(1)
-except:
-    print("The Error is " + str(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     print("Unable to access ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
     sys.exit(1)
 
-#
-#      Get list of DataStores, store in VOLUMES
-#
 try:
     (stdin, stdout, stderr) = \
         ssh.exec_command("esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7")
@@ -182,9 +179,6 @@ if STORE == "LeastUsed":
     STORE = LeastUsedDS
 
 
-#
-#      Get list of Networks available, store in VMNICS
-#
 try:
     (stdin, stdout, stderr) = \
         ssh.exec_command("esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'")
@@ -197,9 +191,6 @@ except Exception as e:
     print("The Error is {}".format(e))
     sys.exit(1)
 
-#
-#      Check MAC address
-#
 MACarg = MAC
 if MAC != "":
     MACregex = '^([a-fA-F0-9]{2}[:|\-]){5}[a-fA-F0-9]{2}$'
@@ -213,10 +204,6 @@ if MAC != "":
         ErrorMessages += " " + MAC + " Invalid MAC address."
         CheckHasErrors = True
 
-
-#
-#      Get from ESXi host if ISO exists
-#
 ISOarg = ISO
 if ISO == "None":
     ISO = ""
@@ -238,13 +225,10 @@ if ISO != "":
         if stdout.readlines() and not stderr.readlines():
             ISOfound = True
 
-    except:
-        print("The Error is {}".format(sys.exc_info()[0]))
+    except Exception as e:
+        print("The Error is {}".format(e))
         sys.exit(1)
 
-#
-#      Check if VM already exists
-#
 VMID = -1
 try:
     (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/getallvms")
@@ -256,13 +240,9 @@ try:
             print("ERROR: VM {} already exists.".format(NAME))
             ErrorMessages += " VM " + NAME + " already exists."
             CheckHasErrors = True
-except:
-    print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     sys.exit(1)
-
-#
-#      Do checks here
-#
 
 #  Check CPU
 if CPU < 1 or CPU > 128:
@@ -319,12 +299,9 @@ try:
         print("ERROR: Directory {} already exists.".format(FullPath))
         ErrorMessages += " Directory {} already exists.".format(FullPath)
         CheckHasErrors = True
-except:
+except Exception as e:
     pass
 
-#
-#      Create the VM
-#
 vmx = []
 vmx.append('config.version = "8"')
 vmx.append('virtualHW.version = "8"')
@@ -409,8 +386,6 @@ else:
 
 if not isDryRun and not CheckHasErrors:
     try:
-
-        # Create NAME.vmx
         if isVerbose:
             print("Create {}.vmx file".format(NAME))
         (stdin, stdout, stderr) = ssh.exec_command("mkdir " + FullPath)
@@ -419,21 +394,18 @@ if not isDryRun and not CheckHasErrors:
             (stdin, stdout, stderr) = ssh.exec_command("echo '" + line + "' >>" + MyVM + ".vmx")
             type(stdin)
 
-        # Create vmdk
         if isVerbose:
             print("Create {}.vmdk file".format(NAME))
         (stdin, stdout, stderr) = \
             ssh.exec_command("vmkfstools -c " + str(HDISK) + "G -d " + DISKFORMAT + " " + MyVM + ".vmdk")
         type(stdin)
 
-        # Register VM
         if isVerbose:
             print("Register VM")
         (stdin, stdout, stderr) = ssh.exec_command("vim-cmd solo/registervm " + MyVM + ".vmx")
         type(stdin)
         VMID = int(stdout.readlines()[0])
 
-        # Power on VM
         if isVerbose:
             print("Power ON VM")
         (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.on " + str(VMID))
@@ -442,22 +414,17 @@ if not isDryRun and not CheckHasErrors:
             print("Error Powering-on VM.")
             Result = "Fail"
 
-        # Get Generated MAC
         if NET != "None":
             (stdin, stdout, stderr) = ssh.exec_command(
                 "grep -i 'ethernet0.*ddress = ' " + MyVM + ".vmx |tail -1|awk '{print $NF}'")
             type(stdin)
             GeneratedMAC = str(stdout.readlines()[0]).strip('\n"')
 
-    except:
+    except Exception as e:
         print("There was an error creating the VM.")
         ErrorMessages += " There was an error creating the VM."
         Result = "Fail"
 
-#      Print Summary
-
-#
-#   The output log string
 LogOutput += '"Host":"{}","Port":"{}","Name":"{}",'.format(HOST, PORT, NAME)
 LogOutput += '"CPU":"{}","Mem":"{}",'.format(CPU, MEM)
 LogOutput += '"Hdisk":"{}","DiskFormat":"{}","Virtual Device":"{}",'.format(HDISK, DISKFORMAT, VIRTDEV)
@@ -474,7 +441,7 @@ LogOutput += '}\n'
 try:
     with open(LOG, "a") as FD:
         FD.write(LogOutput)
-except:
+except Exception as e:
     print("Error writing to log file: {}".format(LOG))
 
 if isSummary:
