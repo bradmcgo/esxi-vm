@@ -141,7 +141,7 @@ if args.UPDATE:
 #      main()
 #
 LogOutput = '{'
-LogOutput += '"datetime":"' + str(the_current_date_time()) + '",'
+LogOutput += '"datetime":"{}",'.format(the_current_date_time())
 
 if NAME == "":
     print("ERROR: Missing required option --name")
@@ -174,8 +174,8 @@ try:
         splitLine = line.split()
         VOLUMES[splitLine[0]] = splitLine[1]
         LeastUsedDS = splitLine[1]
-except:
-    print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     sys.exit(1)
 
 if STORE == "LeastUsed":
@@ -193,8 +193,8 @@ try:
     for line in stdout.readlines():
         splitLine = re.split('[,\n]', line)
         VMNICS.append(splitLine[0])
-except:
-    print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     sys.exit(1)
 
 #
@@ -267,19 +267,19 @@ except:
 #  Check CPU
 if CPU < 1 or CPU > 128:
     print("{} CPU out of range. [1-128].".format(CPU))
-    ErrorMessages += " " + str(CPU) + " CPU out of range. [1-128]."
+    ErrorMessages += " {} CPU out of range. [1-128].".format(CPU)
     CheckHasErrors = True
 
 #  Check MEM
 if MEM < 1 or MEM > 4080:
     print("{} GB Memory out of range. [1-4080].".format(MEM))
-    ErrorMessages += " " + str(MEM) + "GB Memory out of range. [1-4080]."
+    ErrorMessages += " {} GB Memory out of range. [1-4080].".format(MEM)
     CheckHasErrors = True
 
 #  Check HDISK
 if HDISK < 1 or HDISK > 63488:
     print("Virtual Disk size {} GB out of range. [1-63488].".format(HDISK))
-    ErrorMessages += " Virtual Disk size " + str(HDISK) + "GB out of range. [1-63488]."
+    ErrorMessages += " Virtual Disk size {} GB out of range. [1-63488].".format(HDISK)
     CheckHasErrors = True
 
 #  Convert STORE to path and visa-versa
@@ -301,13 +301,13 @@ if DSSTORE not in V:
 if (NET not in VMNICS) and (NET != "None"):
     print("ERROR: Virtual NIC {} doesn't exist.".format(NET))
     print("    Available VM NICs: {} or 'None'".format([str(item) for item in VMNICS]))
-    ErrorMessages += " Virtual NIC " + NET + " doesn't exist."
+    ErrorMessages += " Virtual NIC {} doesn't exist.".format(NET)
     CheckHasErrors = True
 
 #  Check ISO exists
 if ISO != "" and not ISOfound:
     print("ERROR: ISO {} not found.  Use full path to ISO".format(ISO))
-    ErrorMessages += " ISO " + ISO + " not found.  Use full path to ISO"
+    ErrorMessages += " ISO {} not found.  Use full path to ISO".format(ISO)
     CheckHasErrors = True
 
 #  Check if DSPATH/NAME aready exists
@@ -317,7 +317,7 @@ try:
     type(stdin)
     if stdout.readlines() and not stderr.readlines():
         print("ERROR: Directory {} already exists.".format(FullPath))
-        ErrorMessages += " Directory " + FullPath + " already exists."
+        ErrorMessages += " Directory {} already exists.".format(FullPath)
         CheckHasErrors = True
 except:
     pass
@@ -329,15 +329,15 @@ vmx = []
 vmx.append('config.version = "8"')
 vmx.append('virtualHW.version = "8"')
 vmx.append('vmci0.present = "TRUE"')
-vmx.append('displayName = "' + NAME + '"')
+vmx.append('displayName = "{}"'.format(NAME))
 vmx.append('floppy0.present = "FALSE"')
-vmx.append('numvcpus = "' + str(CPU) + '"')
+vmx.append('numvcpus = "{}"'.format(CPU))
 vmx.append('scsi0.present = "TRUE"')
 vmx.append('scsi0.sharedBus = "none"')
 vmx.append('scsi0.virtualDev = "pvscsi"')
-vmx.append('memsize = "' + str(MEM * 1024) + '"')
+vmx.append('memsize = "{}"'.format(MEM * 1024))
 vmx.append('scsi0:0.present = "TRUE"')
-vmx.append('scsi0:0.fileName = "' + NAME + '.vmdk"')
+vmx.append('scsi0:0.fileName = "{}.vmdk"'.format(NAME))
 vmx.append('scsi0:0.deviceType = "scsi-hardDisk"')
 if ISO == "":
     vmx.append('ide1:0.present = "TRUE"')
@@ -347,7 +347,7 @@ if ISO == "":
     vmx.append('ide1:0.clientDevice = "TRUE"')
 else:
     vmx.append('ide1:0.present = "TRUE"')
-    vmx.append('ide1:0.fileName = "' + ISO + '"')
+    vmx.append('ide1:0.fileName = "{}"'.format(ISO))
     vmx.append('ide1:0.deviceType = "cdrom-image"')
 vmx.append('pciBridge0.present = "TRUE"')
 vmx.append('pciBridge4.present = "TRUE"')
@@ -362,23 +362,23 @@ vmx.append('pciBridge6.functions = "8"')
 vmx.append('pciBridge7.present = "TRUE"')
 vmx.append('pciBridge7.virtualDev = "pcieRootPort"')
 vmx.append('pciBridge7.functions = "8"')
-vmx.append('guestOS = "' + GUESTOS + '"')
+vmx.append('guestOS = "{}"'.format(GUESTOS))
 if NET != "None":
     vmx.append('ethernet0.virtualDev = "vmxnet3"')
     vmx.append('ethernet0.present = "TRUE"')
-    vmx.append('ethernet0.networkName = "' + NET + '"')
+    vmx.append('ethernet0.networkName = "{}"'.format(NET))
     if MAC == "":
         vmx.append('ethernet0.addressType = "generated"')
     else:
         vmx.append('ethernet0.addressType = "static"')
-        vmx.append('ethernet0.address = "' + MAC + '"')
+        vmx.append('ethernet0.address = "{}"'.format(MAC))
 
 #
 #   Merge extra VMX options
 for VMXopt in VMXOPTS:
     try:
         k, v = VMXopt.split("=")
-    except:
+    except Exception:
         k = ""
         v = ""
     key = k.lstrip().strip()
@@ -386,7 +386,7 @@ for VMXopt in VMXOPTS:
     for i in vmx:
         try:
             ikey, ivalue = i.split("=")
-        except:
+        except Exception:
             break
         if ikey.lstrip().strip().lower() == key.lower():
             index = vmx.index(i)
@@ -458,31 +458,21 @@ if not isDryRun and not CheckHasErrors:
 
 #
 #   The output log string
-LogOutput += '"Host":"' + HOST + '",'
-LogOutput += '"Port":"' + str(PORT) + '",'
-LogOutput += '"Name":"' + NAME + '",'
-LogOutput += '"CPU":"' + str(CPU) + '",'
-LogOutput += '"Mem":"' + str(MEM) + '",'
-LogOutput += '"Hdisk":"' + str(HDISK) + '",'
-LogOutput += '"DiskFormat":"' + DISKFORMAT + '",'
-LogOutput += '"Virtual Device":"' + VIRTDEV + '",'
-LogOutput += '"Store":"' + STORE + '",'
-LogOutput += '"Store Used":"' + DSPATH + '",'
-LogOutput += '"Network":"' + NET + '",'
-LogOutput += '"ISO":"' + ISOarg + '",'
-LogOutput += '"ISO used":"' + ISO + '",'
-LogOutput += '"Guest OS":"' + GUESTOS + '",'
-LogOutput += '"MAC":"' + MACarg + '",'
-LogOutput += '"MAC Used":"' + GeneratedMAC + '",'
-LogOutput += '"Dry Run":"' + str(isDryRun) + '",'
-LogOutput += '"Verbose":"' + str(isVerbose) + '",'
+LogOutput += '"Host":"{}","Port":"{}","Name":"{}",'.format(HOST, PORT, NAME)
+LogOutput += '"CPU":"{}","Mem":"{}",'.format(CPU, MEM)
+LogOutput += '"Hdisk":"{}","DiskFormat":"{}","Virtual Device":"{}",'.format(HDISK, DISKFORMAT, VIRTDEV)
+LogOutput += '"Store":"{}","Store Used":"{}",'.format(STORE, DSPATH)
+LogOutput += '"Network":"{}",'.format(NET)
+LogOutput += '"ISO":"{}","ISO used":"{}",'.format(ISOarg, ISO)
+LogOutput += '"Guest OS":"{}",'.format(GUESTOS)
+LogOutput += '"MAC":"{}","MAC Used":"'.format(MACarg, GeneratedMAC)
+LogOutput += '"Dry Run":"{}","Verbose":"{}",'.format(isDryRun, isVerbose)
 if ErrorMessages != "":
-    LogOutput += '"Error Message":"' + ErrorMessages + '",'
-LogOutput += '"Result":"' + Result + '",'
-LogOutput += '"Completion Time":"' + str(the_current_date_time()) + '"'
+    LogOutput += '"Error Message":"{}",'.format(ErrorMessages)
+LogOutput += '"Result":"{}","Completion Time":"{}"'.format(Result, the_current_date_time())
 LogOutput += '}\n'
 try:
-    with open(LOG, "a+w") as FD:
+    with open(LOG, "a") as FD:
         FD.write(LogOutput)
 except:
     print("Error writing to log file: {}".format(LOG))

@@ -3,14 +3,6 @@ import os.path
 import sys
 import yaml
 import datetime                   # For current Date/Time
-from math import log
-
-
-#
-#
-#   Functions
-#
-#
 
 
 def setup_config():
@@ -79,9 +71,8 @@ def setup_config():
         with open(config_data_file_location, 'w') as FD:
             yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
-    except:
+    except Exception as e:
         print("Unable to create/update config file {}".format(config_data_file_location))
-        e = sys.exc_info()[0]
         print("The Error is {}".format(e))
         sys.exit(1)
     return config_data
@@ -93,9 +84,8 @@ def save_config(config_data):
         with open(config_data_file_location, 'w') as FD:
             yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
-    except:
+    except Exception as e:
         print("Unable to create/update config file {}".format(config_data_file_location))
-        e = sys.exc_info()[0]
         print("The Error is {}".format(e))
         return 1
     return 0

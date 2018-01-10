@@ -91,14 +91,11 @@ try:
     if re.match("Version", str(stdout.readlines())) is not None:
         print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
         sys.exit(1)
-except:
-    print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     print("Unable to access ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
     sys.exit(1)
 
-#
-#      Check if VM exists
-#
 VMID = -1
 CheckHasWarnings = False
 
@@ -118,8 +115,8 @@ try:
         ErrorMessages += " VM " + NAME + " doesn't exists."
         CheckHasErrors = True
         CheckHasWarnings = True
-except:
-        print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+        print("The Error is {}".format(e))
         sys.exit(1)
 
 #  Get List of Volumes, 
@@ -131,8 +128,8 @@ try:
     for line in stdout.readlines():
         splitLine = line.split()
         VOLUMES[splitLine[0]] = splitLine[1]
-except:
-    print("The Error is {}".format(sys.exc_info()[0]))
+except Exception as e:
+    print("The Error is {}".format(e))
     sys.exit(1)
 
 
@@ -152,13 +149,10 @@ else:
 
 if not CheckHasErrors:
     try:
-
-        CurrentState = ""
-        CurrentStateCounter = 0
-        while CurrentStateCounter < 10:
+        for i in range(0, 10):
             if isVerbose:
                 print("Get state of VM")
-            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate " + str(VMID))
+            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate ".format((VMID)))
             type(stdin)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
@@ -166,22 +160,20 @@ if not CheckHasErrors:
             if re.search("Powered off", lines):
                 break
 
-            # Power off VM
             if isVerbose:
                 print("Power OFF VM")
-            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.off " + str(VMID) + " ||echo")
+            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.off {} ||echo".format(VMID))
             type(stdin)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
                 print("power.off: {}".format(lines))
 
-            CurrentStateCounter += 1
             time.sleep(1)
 
         # destroy VM
         if isVerbose:
             print("Destroy VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/destroy " + str(VMID))
+        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/destroy {}".format(VMID))
         type(stdin)
         lines = str(stdout.readlines()) + str(stderr.readlines())
         if isVerbose:
@@ -193,24 +185,17 @@ if not CheckHasErrors:
         CheckHasErrors = True
         Result = "Fail"
 
-#      Print Summary
-
-#
-#   The output log string
-LogOutput += '"Host":"' + HOST + '",'
-LogOutput += '"Name":"' + NAME + '",'
-LogOutput += '"Store Used":"' + DSPATH + '",'
-LogOutput += '"Verbose":"' + str(isVerbose) + '",'
+LogOutput += '"Host":"{}","Name":"{}","Store Used":"{}","Verbose":"{}"'.format(HOST, NAME, DSPATH, isVerbose)
 if ErrorMessages != "":
-    LogOutput += '"Error Message":"' + ErrorMessages + '",'
-LogOutput += '"Result":"' + Result + '",'
-LogOutput += '"Completion Time":"' + str(the_current_date_time()) + '"'
+    LogOutput += '"Error Message":"{}",'.format(ErrorMessages)
+LogOutput += '"Result":"{}","Completion Time":"{}"'.format(Result, the_current_date_time())
 LogOutput += '}\n'
+
 try:
-    with open(LOG, "a+w") as FD:
+    with open(LOG, "a") as FD:
         FD.write(LogOutput)
-except:
-    print("Error writing to log file: {}".format(LOG))
+except Exception as e:
+    print("Error writing to log file: {}".format(e))
 
 if isSummary:
     if isVerbose:
