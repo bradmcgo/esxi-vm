@@ -78,7 +78,7 @@ LogOutput = '{'
 LogOutput += '"datetime":"' + str(the_current_date_time()) + '",'
 
 if NAME == "":
-    print "ERROR: Missing required option --name"
+    print("ERROR: Missing required option --name")
     sys.exit(1)
 
 try:
@@ -89,11 +89,11 @@ try:
     (stdin, stdout, stderr) = ssh.exec_command("esxcli system version get |grep Version")
     type(stdin)
     if re.match("Version", str(stdout.readlines())) is not None:
-        print "Unable to determine if this is a ESXi Host: %s, port: %s, username: %s" % (HOST, PORT, USER)
+        print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
         sys.exit(1)
 except:
-    print "The Error is " + str(sys.exc_info()[0])
-    print "Unable to access ESXi Host: %s, port: %s, username: %s" % (HOST, PORT, USER)
+    print("The Error is {}".format(sys.exc_info()[0]))
+    print("Unable to access ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
     sys.exit(1)
 
 #
@@ -114,12 +114,12 @@ try:
             VMDIR = splitLine[3]
 
     if VMID == -1:
-        print "Warning: VM " + NAME + " doesn't exists."
+        print("Warning: VM {} doesn't exists.".format(NAME))
         ErrorMessages += " VM " + NAME + " doesn't exists."
         CheckHasErrors = True
         CheckHasWarnings = True
 except:
-        print "The Error is " + str(sys.exc_info()[0])
+        print("The Error is {}".format(sys.exc_info()[0]))
         sys.exit(1)
 
 #  Get List of Volumes, 
@@ -132,7 +132,7 @@ try:
         splitLine = line.split()
         VOLUMES[splitLine[0]] = splitLine[1]
 except:
-    print "The Error is " + str(sys.exc_info()[0])
+    print("The Error is {}".format(sys.exc_info()[0]))
     sys.exit(1)
 
 
@@ -155,42 +155,40 @@ if not CheckHasErrors:
 
         CurrentState = ""
         CurrentStateCounter = 0
-        while CurrentState != "off":
+        while CurrentStateCounter < 10:
             if isVerbose:
-                print "Get state VM"
+                print("Get state of VM")
             (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate " + str(VMID))
             type(stdin)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
-                print "power.getstate: " + lines
+                print("power.getstate: {}".format(lines))
             if re.search("Powered off", lines):
-                CurrentState = "off"
+                break
 
             # Power off VM
             if isVerbose:
-                print "Power OFF VM"
+                print("Power OFF VM")
             (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.off " + str(VMID) + " ||echo")
             type(stdin)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
-                print "power.off: " + str(lines)
+                print("power.off: {}".format(lines))
 
             CurrentStateCounter += 1
-            if CurrentStateCounter > 10:
-                break
             time.sleep(1)
 
         # destroy VM
         if isVerbose:
-            print "Destroy VM"
+            print("Destroy VM")
         (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/destroy " + str(VMID))
         type(stdin)
         lines = str(stdout.readlines()) + str(stderr.readlines())
         if isVerbose:
-            print "destroy: " + str(lines)
+            print("destroy: {}".format(lines))
 
     except:
-        print "There was an error destroying the VM."
+        print("There was an error destroying the VM.")
         ErrorMessages += " There was an error destroying the VM."
         CheckHasErrors = True
         Result = "Fail"
@@ -212,20 +210,20 @@ try:
     with open(LOG, "a+w") as FD:
         FD.write(LogOutput)
 except:
-    print "Error writing to log file: " + LOG
+    print("Error writing to log file: {}".format(LOG))
 
 if isSummary:
     if isVerbose:
-        print "ESXi Host: " + HOST
-    print "VM NAME: " + NAME
-    print "Path: " + DSSTORE 
+        print("ESXi Host: {}".format(HOST))
+    print("VM NAME: {}".format(NAME))
+    print("Path: {}".format(DSSTORE))
 else:
     pass
 
 if CheckHasErrors and not CheckHasWarnings:
-    print "Failed"
+    print("Failed")
     sys.exit(1)
 else:
-    print "Success"
+    print("Success")
     sys.exit(0)
 

@@ -80,9 +80,9 @@ def setup_config():
             yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
     except:
-        print "Unable to create/update config file " + config_data_file_location
+        print("Unable to create/update config file {}".format(config_data_file_location))
         e = sys.exc_info()[0]
-        print "The Error is " + str(e)
+        print("The Error is {}".format(e))
         sys.exit(1)
     return config_data
 
@@ -94,9 +94,9 @@ def save_config(config_data):
             yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
     except:
-        print "Unable to create/update config file " + config_data_file_location
+        print("Unable to create/update config file {}".format(config_data_file_location))
         e = sys.exc_info()[0]
-        print "The Error is " + str(e)
+        print("The Error is {}".format(e))
         return 1
     return 0
 
@@ -104,20 +104,3 @@ def save_config(config_data):
 def the_current_date_time():
     i = datetime.datetime.now()
     return str(i.isoformat())
-
-
-unit_list = zip(['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'], [0, 0, 1, 2, 2, 2])
-
-
-def float2human(num):
-    """Integer to Human readable"""
-    if num > 1:
-        exponent = min(int(log(float(num), 1024)), len(unit_list) - 1)
-        quotient = float(num) / 1024**exponent
-        unit, num_decimals = unit_list[exponent]
-        format_string = '{:.%sf} {}' % num_decimals
-        return format_string.format(quotient, unit)
-    if num == 0:
-        return '0 bytes'
-    if num == 1:
-        return '1 byte'
