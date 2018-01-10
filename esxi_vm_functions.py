@@ -1,4 +1,6 @@
 import os.path
+
+import sys
 import yaml
 import datetime                   # For current Date/Time
 from math import log
@@ -16,10 +18,10 @@ def setup_config():
     #
     #   System wide defaults
     #
-    ConfigData = dict(
+    config_data = dict(
 
         #   Your logfile
-        LOG= os.path.expanduser("~") + "/esxi-vm.log",
+        LOG=os.path.expanduser("~") + "/esxi-vm.log",
 
         #  Enable/Disable dryrun by default
         isDryRun=False,
@@ -64,53 +66,56 @@ def setup_config():
         VMXOPTS=""
     )
 
-    ConfigDataFileLocation = os.path.expanduser("~") + "/.esxi-vm.yml"
+    config_data_file_location = os.path.expanduser("~") + "/.esxi-vm.yml"
 
     #
     # Get ConfigData from ConfigDataFile, then merge.
     #
-    if os.path.exists(ConfigDataFileLocation):
-        FromFileConfigData = yaml.safe_load(open(ConfigDataFileLocation))
-        ConfigData.update(FromFileConfigData)
+    if os.path.exists(config_data_file_location):
+        from_file_config_data = yaml.safe_load(open(config_data_file_location))
+        config_data.update(from_file_config_data)
 
     try:
-        with open(ConfigDataFileLocation, 'w') as FD:
-            yaml.dump(ConfigData, FD, default_flow_style=False)
+        with open(config_data_file_location, 'w') as FD:
+            yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
     except:
-        print "Unable to create/update config file " + ConfigDataFileLocation
+        print "Unable to create/update config file " + config_data_file_location
         e = sys.exc_info()[0]
         print "The Error is " + str(e)
         sys.exit(1)
-    return ConfigData
+    return config_data
 
-def SaveConfig(ConfigData):
-    ConfigDataFileLocation = os.path.expanduser("~") + "/.esxi-vm.yml"
+
+def save_config(config_data):
+    config_data_file_location = os.path.expanduser("~") + "/.esxi-vm.yml"
     try:
-        with open(ConfigDataFileLocation, 'w') as FD:
-            yaml.dump(ConfigData, FD, default_flow_style=False)
+        with open(config_data_file_location, 'w') as FD:
+            yaml.dump(config_data, FD, default_flow_style=False)
         FD.close()
     except:
-        print "Unable to create/update config file " + ConfigDataFileLocation
+        print "Unable to create/update config file " + config_data_file_location
         e = sys.exc_info()[0]
         print "The Error is " + str(e)
         return 1
     return 0
 
 
-def theCurrDateTime():
+def the_current_date_time():
     i = datetime.datetime.now()
     return str(i.isoformat())
 
 
 unit_list = zip(['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'], [0, 0, 1, 2, 2, 2])
+
+
 def float2human(num):
     """Integer to Human readable"""
     if num > 1:
         exponent = min(int(log(float(num), 1024)), len(unit_list) - 1)
         quotient = float(num) / 1024**exponent
         unit, num_decimals = unit_list[exponent]
-        format_string = '{:.%sf} {}' % (num_decimals)
+        format_string = '{:.%sf} {}' % num_decimals
         return format_string.format(quotient, unit)
     if num == 0:
         return '0 bytes'
