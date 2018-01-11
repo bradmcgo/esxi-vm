@@ -6,6 +6,7 @@ import paramiko                   # For remote ssh
 
 from esxi_vm_functions import *
 
+
 # Defaults and Variable setup
 ConfigData = setup_config()
 NAME = ""
@@ -290,7 +291,7 @@ if ISO != "" and not ISOfound:
     ErrorMessages += " ISO {} not found.  Use full path to ISO".format(ISO)
     CheckHasErrors = True
 
-#  Check if DSPATH/NAME aready exists
+#  Check if DSPATH/NAME already exists
 try:
     FullPath = DSPATH + "/" + NAME
     (stdin, stdout, stderr) = ssh.exec_command("ls -d " + FullPath)
@@ -302,56 +303,66 @@ try:
 except Exception as e:
     pass
 
-vmx = []
-vmx.append('config.version = "8"')
-vmx.append('virtualHW.version = "8"')
-vmx.append('vmci0.present = "TRUE"')
-vmx.append('displayName = "{}"'.format(NAME))
-vmx.append('floppy0.present = "FALSE"')
-vmx.append('numvcpus = "{}"'.format(CPU))
-vmx.append('scsi0.present = "TRUE"')
-vmx.append('scsi0.sharedBus = "none"')
-vmx.append('scsi0.virtualDev = "pvscsi"')
-vmx.append('memsize = "{}"'.format(MEM * 1024))
-vmx.append('scsi0:0.present = "TRUE"')
-vmx.append('scsi0:0.fileName = "{}.vmdk"'.format(NAME))
-vmx.append('scsi0:0.deviceType = "scsi-hardDisk"')
-if ISO == "":
-    vmx.append('ide1:0.present = "TRUE"')
-    vmx.append('ide1:0.fileName = "emptyBackingString"')
-    vmx.append('ide1:0.deviceType = "atapi-cdrom"')
-    vmx.append('ide1:0.startConnected = "FALSE"')
-    vmx.append('ide1:0.clientDevice = "TRUE"')
-else:
-    vmx.append('ide1:0.present = "TRUE"')
-    vmx.append('ide1:0.fileName = "{}"'.format(ISO))
-    vmx.append('ide1:0.deviceType = "cdrom-image"')
-vmx.append('pciBridge0.present = "TRUE"')
-vmx.append('pciBridge4.present = "TRUE"')
-vmx.append('pciBridge4.virtualDev = "pcieRootPort"')
-vmx.append('pciBridge4.functions = "8"')
-vmx.append('pciBridge5.present = "TRUE"')
-vmx.append('pciBridge5.virtualDev = "pcieRootPort"')
-vmx.append('pciBridge5.functions = "8"')
-vmx.append('pciBridge6.present = "TRUE"')
-vmx.append('pciBridge6.virtualDev = "pcieRootPort"')
-vmx.append('pciBridge6.functions = "8"')
-vmx.append('pciBridge7.present = "TRUE"')
-vmx.append('pciBridge7.virtualDev = "pcieRootPort"')
-vmx.append('pciBridge7.functions = "8"')
-vmx.append('guestOS = "{}"'.format(GUESTOS))
-if NET != "None":
-    vmx.append('ethernet0.virtualDev = "vmxnet3"')
-    vmx.append('ethernet0.present = "TRUE"')
-    vmx.append('ethernet0.networkName = "{}"'.format(NET))
-    if MAC == "":
-        vmx.append('ethernet0.addressType = "generated"')
-    else:
-        vmx.append('ethernet0.addressType = "static"')
-        vmx.append('ethernet0.address = "{}"'.format(MAC))
+vmx = {
+    'config.version': '8',
+    'virtualHW.version': '8',
+    'vmci0.present': 'TRUE',
+    'displayName': NAME,
+    'floppy0.present': 'FALSE',
+    'numvcpus': CPU,
+    'scsi0.present': 'TRUE',
+    'scsi0.sharedBus': 'none',
+    'scsi0.virtualDev': 'pvscsi',
+    'memsize': str(MEM * 1024),
+    'scsi0:0.present': 'TRUE',
+    'scsi0:0.fileName': "{}.vmdk".format(NAME),
+    'scsi0:0.deviceType': 'scsi-hardDisk',
+    'pciBridge0.present': 'TRUE',
+    'pciBridge4.present': 'TRUE',
+    'pciBridge4.virtualDev': 'pcieRootPort',
+    'pciBridge4.functions': '8',
+    'pciBridge5.present': 'TRUE',
+    'pciBridge5.virtualDev': 'pcieRootPort',
+    'pciBridge5.functions': '8',
+    'pciBridge6.present': 'TRUE',
+    'pciBridge6.virtualDev': 'pcieRootPort',
+    'pciBridge6.functions': '8',
+    'pciBridge7.present': 'TRUE',
+    'pciBridge7.virtualDev': 'pcieRootPort',
+    'pciBridge7.functions': '8',
+    'guestOS': GUESTOS
+}
 
-#
-#   Merge extra VMX options
+if ISO == "":
+    vmx.update({
+        'ide1:0.present': 'TRUE',
+        'ide1:0.fileName': 'emptyBackingString',
+        'ide1:0.deviceType': 'atapi-cdrom',
+        'ide1:0.startConnected': 'FALSE',
+        'ide1:0.clientDevice': 'TRUE'
+    })
+else:
+    vmx.update({
+        'ide1:0.present': 'TRUE',
+        'ide1:0.fileName': ISO,
+        'ide1:0.deviceType': 'atapi-cdrom',
+        'ide1:0.startConnected': 'TRUE',
+    })
+
+if NET != "None":
+    vmx.update({
+        'ethernet0.virtualDev': 'vmxnet3',
+        'ethernet0.present': 'TRUE',
+        'ethernet0.networkName': NET
+    })
+    if MAC == "":
+        vmx.update({'ethernet0.addressType': 'generated'})
+    else:
+        vmx.update({
+            'ethernet0.addressType': 'static',
+            'ethernet0.address': MAC
+        })
+
 for VMXopt in VMXOPTS:
     try:
         k, v = VMXopt.split("=")
@@ -360,23 +371,12 @@ for VMXopt in VMXOPTS:
         v = ""
     key = k.lstrip().strip()
     value = v.lstrip().strip()
-    for i in vmx:
-        try:
-            ikey, ivalue = i.split("=")
-        except Exception:
-            break
-        if ikey.lstrip().strip().lower() == key.lower():
-            index = vmx.index(i)
-            vmx[index] = ikey + " = " + value
-            break
-    else:
-        if key != '' and value != '':
-            vmx.append(key + " = " + value)
+    vmx[key] = value
 
 if isVerbose and VMXOPTS != '':
     print("VMX file:")
-    for i in vmx:
-        print(i)
+    for k, v in vmx.items():
+        print('{} = "{}"'.format(k, v))
 
 MyVM = FullPath + "/" + NAME
 if CheckHasErrors:
@@ -388,27 +388,27 @@ if not isDryRun and not CheckHasErrors:
     try:
         if isVerbose:
             print("Create {}.vmx file".format(NAME))
-        (stdin, stdout, stderr) = ssh.exec_command("mkdir " + FullPath)
+        (stdin, stdout, stderr) = ssh.exec_command("mkdir {}".format(FullPath))
         type(stdin)
-        for line in vmx:
-            (stdin, stdout, stderr) = ssh.exec_command("echo '" + line + "' >>" + MyVM + ".vmx")
+        for k, v in vmx.items():
+            (stdin, stdout, stderr) = ssh.exec_command("echo '{} = \"{}\"' >> {}.vmx".format(k, v, MyVM))
             type(stdin)
 
         if isVerbose:
             print("Create {}.vmdk file".format(NAME))
         (stdin, stdout, stderr) = \
-            ssh.exec_command("vmkfstools -c " + str(HDISK) + "G -d " + DISKFORMAT + " " + MyVM + ".vmdk")
+            ssh.exec_command("vmkfstools -c {}G -d {} {}.vmdk".format(HDISK, DISKFORMAT, MyVM))
         type(stdin)
 
         if isVerbose:
             print("Register VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd solo/registervm " + MyVM + ".vmx")
+        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd solo/registervm {}.vmx".format(MyVM))
         type(stdin)
         VMID = int(stdout.readlines()[0])
 
         if isVerbose:
             print("Power ON VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.on " + str(VMID))
+        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.on {}".format(VMID))
         type(stdin)
         if stderr.readlines():
             print("Error Powering-on VM.")
@@ -416,7 +416,7 @@ if not isDryRun and not CheckHasErrors:
 
         if NET != "None":
             (stdin, stdout, stderr) = ssh.exec_command(
-                "grep -i 'ethernet0.*ddress = ' " + MyVM + ".vmx |tail -1|awk '{print $NF}'")
+                "grep -i 'ethernet0.*ddress = ' {}.vmx |tail -1|awk '{print $NF}'".format(MyVM))
             type(stdin)
             GeneratedMAC = str(stdout.readlines()[0]).strip('\n"')
 

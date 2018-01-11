@@ -36,7 +36,7 @@ Requirements
 
 * It's **highly recommenced** to use password-less authentication by copying your ssh public keys to the ESXi host, otherwise your ESXi root password could be stored in clear-text in your home directory.
 
-* Python 2.7 [paramiko](http://www.paramiko.org) and [PyYAML](https://github.com/yaml/pyyaml) are software requirements.
+* Python 3, [paramiko](http://www.paramiko.org) and [PyYAML](https://github.com/yaml/pyyaml) are software requirements.
 
 ```
 pip install paramiko pyyaml
