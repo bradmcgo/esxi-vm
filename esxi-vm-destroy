@@ -71,36 +71,20 @@ if args.KEY:
 if args.NAME:
     NAME = args.NAME
 
-#
-#      main()
-#
-LogOutput = '{'
-LogOutput += '"datetime":"' + str(the_current_date_time()) + '",'
-
 if NAME == "":
     print("ERROR: Missing required option --name")
     sys.exit(1)
 
-try:
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, port=PORT, username=USER, password=PASSWORD, key_filename=KEY)
+LogOutput = '{'
+LogOutput += '"datetime":"{}",'.format(the_current_date_time())
 
-    (stdin, stdout, stderr) = ssh.exec_command("esxcli system version get |grep Version")
-    type(stdin)
-    if re.match("Version", str(stdout.readlines())) is not None:
-        print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
-        sys.exit(1)
-except Exception as e:
-    print("The Error is {}".format(e))
-    print("Unable to access ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
-    sys.exit(1)
+ssh = connect_to_esxi(HOST, PORT, USER, PASSWORD, KEY, isVerbose)
 
 VMID = -1
 CheckHasWarnings = False
 
 try:
-    (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/getallvms")
+    (stdin, stdout, stderr) = exec_ssh_command("Get list of VMs", "vim-cmd vmsvc/getallvms", ssh, isVerbose)
     type(stdin)
     for line in stdout.readlines():
         splitLine = line.split()
@@ -119,10 +103,11 @@ except Exception as e:
         print("The Error is {}".format(e))
         sys.exit(1)
 
-#  Get List of Volumes, 
 try:
     (stdin, stdout, stderr) = \
-        ssh.exec_command("esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7")
+        exec_ssh_command("Get List of Volumes",
+                             "esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7",
+                             ssh, isVerbose)
     type(stdin)
     VOLUMES = {}
     for line in stdout.readlines():
@@ -150,31 +135,27 @@ else:
 if not CheckHasErrors:
     try:
         for i in range(0, 10):
-            if isVerbose:
-                print("Get state of VM")
-            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.getstate {}".format(VMID))
-            type(stdin)
+            (stdin, stdout, stderr) = exec_ssh_command("Get state of VM",
+                                                       "vim-cmd vmsvc/power.getstate {}".format(VMID),
+                                                       ssh, isVerbose)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
                 print("power.getstate: {}".format(lines))
             if re.search("Powered off", lines):
                 break
 
-            if isVerbose:
-                print("Power OFF VM")
-            (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.off {} ||echo".format(VMID))
-            type(stdin)
+            (stdin, stdout, stderr) = exec_ssh_command("Power OFF VM",
+                                                       "vim-cmd vmsvc/power.off {} ||echo".format(VMID),
+                                                       ssh, isVerbose)
             lines = str(stdout.readlines()) + str(stderr.readlines())
             if isVerbose:
                 print("power.off: {}".format(lines))
 
             time.sleep(1)
 
-        # destroy VM
-        if isVerbose:
-            print("Destroy VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/destroy {}".format(VMID))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Destroy VM",
+                                                   "vim-cmd vmsvc/destroy {}".format(VMID),
+                                                   ssh, isVerbose)
         lines = str(stdout.readlines()) + str(stderr.readlines())
         if isVerbose:
             print("destroy: {}".format(lines))

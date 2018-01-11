@@ -7,14 +7,6 @@ import paramiko                   # For remote ssh
 from esxi_vm_functions import *
 
 
-def exec_ssh_command(message, command, verbose):
-    if verbose:
-        if message:
-            print(message)
-        print("SSH: " + command)
-    return ssh.exec_command(command)
-
-
 # Defaults and Variable setup
 ConfigData = setup_config()
 NAME = ""
@@ -146,35 +138,20 @@ if args.UPDATE:
     if NAME == "":
         sys.exit(0)
 
-#
-#      main()
-#
-LogOutput = '{'
-LogOutput += '"datetime":"{}",'.format(the_current_date_time())
-
 if NAME == "":
     print("ERROR: Missing required option --name")
     sys.exit(1)
 
-try:
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, port=PORT, username=USER, password=PASSWORD, key_filename=KEY)
+LogOutput = '{'
+LogOutput += '"datetime":"{}",'.format(the_current_date_time())
 
-    (stdin, stdout, stderr) = exec_ssh_command("Get ESXi version", "esxcli system version get |grep Version", isVerbose)
-    if re.match("Version", str(stdout.readlines())) is not None:
-        print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
-        sys.exit(1)
-except Exception as e:
-    print("The Error is {}".format(e))
-    print("Unable to access ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
-    sys.exit(1)
+ssh = connect_to_esxi(HOST, PORT, USER, PASSWORD, KEY, isVerbose)
 
 try:
     (stdin, stdout, stderr) = \
         exec_ssh_command("Get existing volumes",
                          "esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7",
-                         isVerbose)
+                         ssh, isVerbose)
     VOLUMES = {}
     for line in stdout.readlines():
         splitLine = line.split()
@@ -192,7 +169,7 @@ try:
     (stdin, stdout, stderr) = \
         exec_ssh_command("Get existing networks",
                          "esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'",
-                         isVerbose)
+                         ssh, isVerbose)
     VMNICS = []
     for line in stdout.readlines():
         splitLine = re.split('[,\n]', line)
@@ -224,14 +201,14 @@ if ISO != "":
             (stdin, stdout, stderr) = exec_ssh_command("Search ISO image",
                                                        "find /vmfs/volumes/ -type f -name {}".format(ISO) +
                                                        " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;",
-                                                       isVerbose
+                                                       ssh, isVerbose
             )
             FoundISOPath = str(stdout.readlines()[0]).strip('\n')
             if isVerbose:
                 print("FoundISOPath: {}".format(FoundISOPath))
             ISO = str(FoundISOPath)
 
-        (stdin, stdout, stderr) = exec_ssh_command("Check ISO", "ls {}".format(ISO), isVerbose)
+        (stdin, stdout, stderr) = exec_ssh_command("Check ISO", "ls {}".format(ISO), ssh, isVerbose)
         if stdout.readlines() and not stderr.readlines():
             ISOfound = True
 
@@ -241,7 +218,7 @@ if ISO != "":
 
 VMID = -1
 try:
-    (stdin, stdout, stderr) = exec_ssh_command("Get list of VMs", "vim-cmd vmsvc/getallvms", isVerbose)
+    (stdin, stdout, stderr) = exec_ssh_command("Get list of VMs", "vim-cmd vmsvc/getallvms", ssh, isVerbose)
     for line in stdout.readlines():
         splitLine = line.split()
         if NAME == splitLine[1]:
@@ -301,7 +278,7 @@ if ISO != "" and not ISOfound:
 #  Check if DSPATH/NAME already exists
 try:
     FullPath = DSPATH + "/" + NAME
-    (stdin, stdout, stderr) = exec_ssh_command("List VMs directories", "ls -d {}".format(FullPath), isVerbose)
+    (stdin, stdout, stderr) = exec_ssh_command("List VMs directories", "ls -d {}".format(FullPath), ssh, isVerbose)
     if stdout.readlines() and not stderr.readlines():
         print("ERROR: Directory {} already exists.".format(FullPath))
         ErrorMessages += " Directory {} already exists.".format(FullPath)
@@ -393,20 +370,21 @@ else:
 if not isDryRun and not CheckHasErrors:
     try:
         (stdin, stdout, stderr) = exec_ssh_command("Create {}.vmx file".format(NAME),
-                                                   "mkdir {}".format(FullPath), isVerbose)
+                                                   "mkdir {}".format(FullPath), ssh, isVerbose)
         for k, v in vmx.items():
             (stdin, stdout, stderr) = exec_ssh_command(None, "echo '{} = \"{}\"' >> {}.vmx".format(k, v, MyVM),
-                                                       isVerbose)
+                                                       ssh, isVerbose)
 
         (stdin, stdout, stderr) = exec_ssh_command("Create {}.vmdk file".format(NAME),
                                                    "vmkfstools -c {}G -d {} {}.vmdk".format(HDISK, DISKFORMAT, MyVM),
-                                                   isVerbose)
+                                                   ssh, isVerbose)
 
         (stdin, stdout, stderr) = exec_ssh_command("Register VM",
-                                                   "vim-cmd solo/registervm {}.vmx".format(MyVM), isVerbose)
+                                                   "vim-cmd solo/registervm {}.vmx".format(MyVM), ssh, isVerbose)
         VMID = int(stdout.readlines()[0])
 
-        (stdin, stdout, stderr) = exec_ssh_command("Power ON VM", "vim-cmd vmsvc/power.on {}".format(VMID), isVerbose)
+        (stdin, stdout, stderr) = exec_ssh_command("Power ON VM", "vim-cmd vmsvc/power.on {}".format(VMID),
+                                                   ssh, isVerbose)
         if stderr.readlines():
             print("Error Powering-on VM.")
             Result = "Fail"
@@ -414,7 +392,7 @@ if not isDryRun and not CheckHasErrors:
         if NET != "None":
             (stdin, stdout, stderr) = exec_ssh_command("Get MAC address",
                                                        "grep -i 'ethernet0.*ddress = ' {}.vmx".format(MyVM) +
-                                                       " |tail -1|awk '{print $NF}'", isVerbose)
+                                                       " |tail -1|awk '{print $NF}'", ssh, isVerbose)
             GeneratedMAC = str(stdout.readlines()[0]).strip('\n"')
 
     except Exception as e:

@@ -3,7 +3,8 @@ import os.path
 import sys
 import yaml
 import datetime                   # For current Date/Time
-
+import re                         # For regex
+import paramiko                   # For remote ssh
 
 def setup_config():
 
@@ -94,3 +95,38 @@ def save_config(config_data):
 def the_current_date_time():
     i = datetime.datetime.now()
     return str(i.isoformat())
+
+
+def exec_ssh_command(message, command, ssh, verbose):
+    if verbose:
+        if message:
+            print(message)
+        print("SSH: " + command)
+    return ssh.exec_command(command)
+
+
+def get_esxi_version(ssh, verbose):
+    try:
+        (stdin, stdout, stderr) = exec_ssh_command("Get ESXi version", "esxcli system version get |grep Version",
+                                                   ssh, verbose)
+        if re.match("Version", str(stdout.readlines())) is not None:
+            print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
+            sys.exit(1)
+
+    except Exception as e:
+        print("Unable to get ESXi version")
+        print("The Error is {}".format(e))
+        sys.exit(1)
+
+
+def connect_to_esxi(host, port, user, password, key, verbose):
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, port=port, username=user, password=password, key_filename=key)
+        get_esxi_version(ssh, verbose)
+        return ssh
+    except Exception as e:
+        print("Unable to access ESXi Host: {}, port: {}, username: {}, key: {}".format(host, port, user, key))
+        print("The Error is {}".format(e))
+        sys.exit(1)
