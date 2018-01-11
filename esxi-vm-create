@@ -7,6 +7,14 @@ import paramiko                   # For remote ssh
 from esxi_vm_functions import *
 
 
+def exec_ssh_command(message, command, verbose):
+    if verbose:
+        if message:
+            print(message)
+        print("SSH: " + command)
+    return ssh.exec_command(command)
+
+
 # Defaults and Variable setup
 ConfigData = setup_config()
 NAME = ""
@@ -153,8 +161,7 @@ try:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(HOST, port=PORT, username=USER, password=PASSWORD, key_filename=KEY)
 
-    (stdin, stdout, stderr) = ssh.exec_command("esxcli system version get |grep Version")
-    type(stdin)
+    (stdin, stdout, stderr) = exec_ssh_command("Get ESXi version", "esxcli system version get |grep Version", isVerbose)
     if re.match("Version", str(stdout.readlines())) is not None:
         print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
         sys.exit(1)
@@ -165,8 +172,9 @@ except Exception as e:
 
 try:
     (stdin, stdout, stderr) = \
-        ssh.exec_command("esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7")
-    type(stdin)
+        exec_ssh_command("Get existing volumes",
+                         "esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7",
+                         isVerbose)
     VOLUMES = {}
     for line in stdout.readlines():
         splitLine = line.split()
@@ -182,8 +190,9 @@ if STORE == "LeastUsed":
 
 try:
     (stdin, stdout, stderr) = \
-        ssh.exec_command("esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'")
-    type(stdin)
+        exec_ssh_command("Get existing networks",
+                         "esxcli network vswitch standard list|grep Portgroups|sed 's/^   Portgroups: //g'",
+                         isVerbose)
     VMNICS = []
     for line in stdout.readlines():
         splitLine = re.split('[,\n]', line)
@@ -212,17 +221,17 @@ if ISO != "":
     try:
         #  If ISO has no "/", try to find the ISO
         if not re.match('/', ISO):
-            (stdin, stdout, stderr) = \
-                ssh.exec_command("find /vmfs/volumes/ -type f -name " + ISO +
-                                 " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;")
-            type(stdin)
+            (stdin, stdout, stderr) = exec_ssh_command("Search ISO image",
+                                                       "find /vmfs/volumes/ -type f -name {}".format(ISO) +
+                                                       " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;",
+                                                       isVerbose
+            )
             FoundISOPath = str(stdout.readlines()[0]).strip('\n')
             if isVerbose:
                 print("FoundISOPath: {}".format(FoundISOPath))
             ISO = str(FoundISOPath)
 
-        (stdin, stdout, stderr) = ssh.exec_command("ls " + str(ISO))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Check ISO", "ls {}".format(ISO), isVerbose)
         if stdout.readlines() and not stderr.readlines():
             ISOfound = True
 
@@ -232,15 +241,13 @@ if ISO != "":
 
 VMID = -1
 try:
-    (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/getallvms")
-    type(stdin)
+    (stdin, stdout, stderr) = exec_ssh_command("Get list of VMs", "vim-cmd vmsvc/getallvms", isVerbose)
     for line in stdout.readlines():
         splitLine = line.split()
         if NAME == splitLine[1]:
             VMID = splitLine[0]
             print("ERROR: VM {} already exists.".format(NAME))
-            ErrorMessages += " VM " + NAME + " already exists."
-            CheckHasErrors = True
+            sys.exit(1)
 except Exception as e:
     print("The Error is {}".format(e))
     sys.exit(1)
@@ -294,8 +301,7 @@ if ISO != "" and not ISOfound:
 #  Check if DSPATH/NAME already exists
 try:
     FullPath = DSPATH + "/" + NAME
-    (stdin, stdout, stderr) = ssh.exec_command("ls -d " + FullPath)
-    type(stdin)
+    (stdin, stdout, stderr) = exec_ssh_command("List VMs directories", "ls -d {}".format(FullPath), isVerbose)
     if stdout.readlines() and not stderr.readlines():
         print("ERROR: Directory {} already exists.".format(FullPath))
         ErrorMessages += " Directory {} already exists.".format(FullPath)
@@ -386,38 +392,29 @@ else:
 
 if not isDryRun and not CheckHasErrors:
     try:
-        if isVerbose:
-            print("Create {}.vmx file".format(NAME))
-        (stdin, stdout, stderr) = ssh.exec_command("mkdir {}".format(FullPath))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Create {}.vmx file".format(NAME),
+                                                   "mkdir {}".format(FullPath), isVerbose)
         for k, v in vmx.items():
-            (stdin, stdout, stderr) = ssh.exec_command("echo '{} = \"{}\"' >> {}.vmx".format(k, v, MyVM))
-            type(stdin)
+            (stdin, stdout, stderr) = exec_ssh_command(None, "echo '{} = \"{}\"' >> {}.vmx".format(k, v, MyVM),
+                                                       isVerbose)
 
-        if isVerbose:
-            print("Create {}.vmdk file".format(NAME))
-        (stdin, stdout, stderr) = \
-            ssh.exec_command("vmkfstools -c {}G -d {} {}.vmdk".format(HDISK, DISKFORMAT, MyVM))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Create {}.vmdk file".format(NAME),
+                                                   "vmkfstools -c {}G -d {} {}.vmdk".format(HDISK, DISKFORMAT, MyVM),
+                                                   isVerbose)
 
-        if isVerbose:
-            print("Register VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd solo/registervm {}.vmx".format(MyVM))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Register VM",
+                                                   "vim-cmd solo/registervm {}.vmx".format(MyVM), isVerbose)
         VMID = int(stdout.readlines()[0])
 
-        if isVerbose:
-            print("Power ON VM")
-        (stdin, stdout, stderr) = ssh.exec_command("vim-cmd vmsvc/power.on {}".format(VMID))
-        type(stdin)
+        (stdin, stdout, stderr) = exec_ssh_command("Power ON VM", "vim-cmd vmsvc/power.on {}".format(VMID), isVerbose)
         if stderr.readlines():
             print("Error Powering-on VM.")
             Result = "Fail"
 
         if NET != "None":
-            (stdin, stdout, stderr) = ssh.exec_command(
-                "grep -i 'ethernet0.*ddress = ' {}.vmx |tail -1|awk '{print $NF}'".format(MyVM))
-            type(stdin)
+            (stdin, stdout, stderr) = exec_ssh_command("Get MAC address",
+                                                       "grep -i 'ethernet0.*ddress = ' {}.vmx".format(MyVM) +
+                                                       " |tail -1|awk '{print $NF}'", isVerbose)
             GeneratedMAC = str(stdout.readlines()[0]).strip('\n"')
 
     except Exception as e:
