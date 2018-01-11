@@ -1,24 +1,37 @@
 Introduction
 ------------
 
-This utility is a simple to use comand line tool to create VMs on an ESXi host from from a system running python and SSH.  vCenter is **not required**.  This tool is an easy way to automate building VM's from command line or from other testing or automation tools such as Bamboo, Puppet, Saltstack, or Chef.
+This utility is a simple to use command line tool to create or destroy VMs on an ESXi host from from a system running python and SSH. vCenter is **not required**. This tool is an easy way to automate building VM's from command line or from other testing or automation tools such as Bamboo, Puppet, Saltstack, or Chef.
+
+Requirements
+------------
+
+* You must enable SSH access on your ESXi server. The VMware VIX API tools are **not required**.
+
+* It's **highly recommenced** to use password-less authentication by copying your SSH public keys to the ESXi host, otherwise your ESXi root password could be stored in clear-text in your home directory.
+
+* Python **3**, [paramiko](http://www.paramiko.org) and [PyYAML](https://github.com/yaml/pyyaml):
+
+```
+pip install paramiko pyyaml
+```
 
 Usage
 -----
 
 * Get help using `--help` option.   The defaults will be displayed in the help output.
 
-* The only command line required paramater is the VM name (`-n`), all other command line arguments are optional.
+* The only command line required parameter is the VM name (`-n`), all other command line arguments are optional.
 
 * Defaults are stored in your home directory in `~/.esxi-vm.yml`.   You can edit this file directly, or you can use the tool to update most the defaults by specifying `--updateDefaults`.
 
 * One of the first settings to set and save as defaults is the `--Host` (`-H`), `--User` (`-U`) and `--Password` (`-P`).
 
-* Some basic sanity checks are done on the ESXi host before creating the VM.  The `--verbose` (`-V`) option will give you a little more details in the creation process.  If an invalid Disk Stores or Network Interface is specified, the available devices will be shown in the error message. The tool will not show the list of available ISO images, and Guest OS types.  CPU, Memory, Virtual Disk sizes are based on ESXi 6.0 limitations.
+* Some basic sanity checks are done on the ESXi host before creating the VM.  The `--verbose` (`-V`) option will give you a little more details in the creation process.  If an invalid *Disk Stores* or *Network Interface* is specified, the available devices will be shown in the error message. The tool will not show the list of available ISO images, and Guest OS types.  CPU, Memory, Virtual Disk sizes are based on ESXi 6.0 limitations.
 
 * The `--dry` (`-d`) option will go through the sanity checks, but will not create the VM.
 
-* By default the Disk Store is set to `LeastUsed.  This will use the Disk Store with the most free space (in bytes).
+* By default the Disk Store is set to `LeastUsed`.  This will use the *Disk Store* with the most free space (in bytes).
 
 * By default the ISO is set to `None`.  Specify the full path to the ISO image.   If you specify just the ISO image filename (no path), the system will attempt to find the ISO image on your DataStores.
 
@@ -28,25 +41,10 @@ Usage
 
 * To help with automated provisioning, the script will output the full MAC address and exit code 0 on success.  You can specify `--summary` to get a more detailed summary of the VM that was created.
 
-
-Requirements
-------------
-
-* You must enable ssh access on your ESXi server.  Google 'how to enable ssh access on esxi' for instructions.   The VMware VIX API tools are **not required**.
-
-* It's **highly recommenced** to use password-less authentication by copying your ssh public keys to the ESXi host, otherwise your ESXi root password could be stored in clear-text in your home directory.
-
-* Python 3, [paramiko](http://www.paramiko.org) and [PyYAML](https://github.com/yaml/pyyaml) are software requirements.
-
-```
-pip install paramiko pyyaml
-```
-
-
 Command Line Args
 -----------------
 
-```
+```bash
 ./esxi-vm-create --help
 
 usage: esxi-vm-create [-h] [-d] [-H HOST] [-T PORT] [-U USER] [-P PASSWORD]
@@ -64,8 +62,8 @@ optional arguments:
   -U USER, --User USER  ESXi Host username (root)
   -P PASSWORD, --Password PASSWORD
                         ESXi Host password (*****)
-  -K KEY, --Key KEY     ESXi Host connection key (path to private key)
-  -n NAME, --name NAME  VM name
+  -K KEY, --Key KEY     ESXi Host path to private key ()
+  -n NAME, --name NAME  VM name ()
   -c CPU, --cpu CPU     Number of vCPUS (2)
   -m MEM, --mem MEM     Memory in GB (4)
   -v HDISK, --vdisk HDISK
@@ -76,27 +74,54 @@ optional arguments:
   -S STORE, --store STORE
                         vmfs Store | LeastUsed (LeastUsed)
   -g GUESTOS, --guestos GUESTOS
-                        Guest OS. (centos-64)
+                        Guest OS (centos-64)
   -o VMXOPTS, --options VMXOPTS
-                        Comma list of VMX Options.
+                        Comma list of VMX options
   -V, --verbose         Enable Verbose mode (False)
+  -f LOG, --logfile LOG
+                        Path to the log file (/Users/sebastien/esxi-vm.log)
+  -l, --log             Write to log file (False)
   --summary             Display Summary (False)
   -u, --updateDefaults  Update Default VM settings stored in ~/.esxi-vm.yml
+```
+
+```nash
+./esxi-vm-destroy --help
+
+usage: esxi-vm-destroy [-h] [-H HOST] [-T PORT] [-U USER] [-P PASSWORD]
+                       [-K KEY] [-n NAME] [-V] [--summary]
+
+ESXi Destroy VM utility.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -H HOST, --Host HOST  ESXi Host/IP (esxi)
+  -T PORT, --Port PORT  ESXi Port number (22)
+  -U USER, --User USER  ESXi Host username (root)
+  -P PASSWORD, --Password PASSWORD
+                        ESXi Host password (*****)
+  -K KEY, --Key KEY     ESXi Host path to private key ()
+  -n NAME, --name NAME  VM name ()
+  -V, --verbose         Enable Verbose mode (False)
+  -f LOG, --logfile LOG
+                        Path to the log file (/Users/sebastien/esxi-vm.log)
+  -l, --log             Write to log file (False)
+  --summary             Display Summary (False)
 ```
 
 Example Usage
 -------------
 
-* Running the script for the first time is recommended to specify your defaults (ESXi HOST, PASSWORD).
+* Running the script for the first time is recommended to specify your defaults (ESXi HOST, USER, PASSWORD):
 
-```
+```bash
 ./esxi-vm-create -H esxi -P MySecurePassword -u
 Saving new Defaults to ~/.esxi-vm.yml
 ```
 
-* Create a new VM named `testvm01` using all defaults from `~/.esxi-vm.yml`.
+* Create a new VM named `testvm01` using all defaults from `~/.esxi-vm.yml`:
 
-```
+```bash
 ./esxi-vm-create -n testvm01 --summary
 
 Create VM Success:
@@ -108,23 +133,23 @@ DS Store: DS_4TB
 Network: None
 ```
 
-* Change default number of vCPUs to `4`, Memory to `8GB` and vDisk size to `40GB`.
+* Change default number of vCPUs to `4`, Memory to `8GB` and vDisk size to `40GB`:
 
-```
+```bash
 ./esxi-vm-create -c 4 -m 8 -v 40 -u
 Saving new Defaults to ~/.esxi-vm.yml
 ```
 
-*  Create a new VM named `testvm02` using new defaults from `~/.esxi-vm.yml` and specifying a Network interface and partial MAC.
+*  Create a new VM named `testvm02` using new defaults from `~/.esxi-vm.yml` and specifying a Network interface and partial MAC:
 
-```
+```bash
 ./esxi-vm-create -n testvm02 -N 192.168.1 -M 01:02:03
 00:50:56:01:02:03
 ```
 
-* Available *Network Interfaces* and *Available Disk Storage* volumes are listed if an invalid option is specified.
+* Available *Network Interfaces* and *Available Disk Storage* volumes are listed if an invalid option is specified:
 
-```
+```bash
 ./esxi-vm-create -n testvm03 -N BadNet -S BadDS
 ERROR: Disk Storage BadDS doesn't exist.
     Available Disk Stores: ['DS_SSD500s', 'DS_SSD500c', 'DS_SSD250', 'DS_4TB', 'DS_3TB_m']
@@ -133,9 +158,9 @@ ERROR: Virtual NIC BadNet doesn't exist.
     Available VM NICs: ['192.168.1', '192.168.0', 'VM Network test'] or 'None'
 ```
 
-* Create a new VM named `testvm03` using a valid *Network Interface*, valid *Disk Storage* volume, summary and verbose enabled.  Save as default.
+* Create a new VM named `testvm03` using a valid *Network Interface*, valid *Disk Storage* volume, summary and verbose enabled; save as default:
 
-```
+```bash
 ./esxi-vm-create -n testvm03 -N 192.168.1 -S DS_3TB_m --summary --verbose --updateDefaults
 Saving new Defaults to ~/.esxi-vm.yml
 Create testvm03.vmx file
@@ -157,9 +182,9 @@ MAC: 00:0c:29:32:63:92
 00:0c:29:32:63:92
 ```
 
-* Create a new VM named `testvm04` specifying an ISO file to boot.
+* Create a new VM named `testvm04` specifying an ISO file to boot:
 
-```
+```bash
 ./esxi-vm-create -n testvm04 --summary --iso CentOS-7-x86_64-Minimal-1611.iso
 FoundISOPath: /vmfs/volumes/5430094d-5a4fa180-4962-0017a45127e2/ISO/CentOS-7-x86_64-Minimal-1611.iso
 Create testvm04.vmx file
@@ -180,19 +205,29 @@ ISO: /vmfs/volumes/5430094d-5a4fa180-4962-0017a45127e2/ISO/CentOS-7-x86_64-Minim
 Guest OS: centos-64
 MAC: 00:0c:29:ea:a0:42
 00:0c:29:ea:a0:42
-
 ```
 
-* Merge/Add extra VMX options, saved as default.
+* Merge or add extra VMX options, saved as default:
 
-```
-./esxi-vm-create -o 'floppy0.present  = "TRUE",svga.autodetect = "TRUE",svga.present = "TRUE"' -u
+```bash
+./esxi-vm-create -o 'floppy0.present  = TRUE,svga.autodetect = TRUE,svga.present = TRUE' -u
 Saving new Defaults to ~/.esxi-vm.yml
 ```
 
-* Create a new VM named `testvm04` on the host `esxi2` accessible on port `2222` (instead of the usual `22`) and with an explicit private key `/home/user1/.ssh/id_rsa_esxi2`.
+**IMPORTANT**: *Do not set double quotes around values (such as `TRUE`), they will be automatically added by the tool.*
 
+* Set the *Virtual machine hardware version* to `11` (ESXI 6), be default it is `8`:
+
+```bash
+./esxi-vm-create -o "virtualHW.version = 11" -u
+Saving new Defaults to ~/.esxi-vm.yml
 ```
+
+**IMPORTANT**: *Do not set double quotes around values (such as `11`), they will be automatically added by the tool.*
+
+* Create a new VM named `testvm04` on the host `esxi2` accessible on port `2222` (instead of the usual `22`) and with an explicit private key `/home/user1/.ssh/id_rsa_esxi2`:
+
+```bash
 ./esxi-vm-create -H esxi2 -T 2222 -K /home/user1/.ssh/id_rsa_esxi2 -n testvm04 --summary
 
 Create VM Success:
@@ -204,23 +239,41 @@ DS Store: DS_4TB
 Network: None
 ```
 
+* Destroy the VM named `testvm04`:
+
+```bash
+./esxi-vm-destroy -H esxi -P MySecurePassword -U root -n testvm04
+```
+
+This fork
+--------
+
+This is a fork. Summary of changes in this fork:
+
+* Fix a bug in the `vmx` file generation (double quotes missing)
+* Migrate to Python 3, as [Python 2 is soon dead](https://pythonclock.org)
+* Add parameters `--port` and `--key` (SSH port number and private key)
+* Verbose is now more verbose (it displays also SSH commands)
+* By default, does **not** write to log file
+* `esxi-vm-destroy` is documented
+* Move some common code in `esxi-vm-create` and `esxi-vm-destroy` to `esxi_vm_functions.py`
+* Code cleaning (work in progress)
+
+Copyrights
+----------
+
+* **This fork** Copyright &copy; 2018 Sebastien Andrivet
+* **[Oiginal code](https://github.com/josenk/esxi-vm-create)** Copyright &copy; 2017 Jonathan Senkerik
+
 License
 -------
 
-* Copyright (C) 2017 Jonathan Senkerik
-* Modifications Copyright (C) 2018 Sebastien Andrivet
+![](https://www.gnu.org/graphics/gplv3-127x51.png)
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+> This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+> This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+> You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
