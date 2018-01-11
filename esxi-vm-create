@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 import argparse                   # Argument parser
-import re                         # For regex
-import paramiko                   # For remote ssh
 
 from esxi_vm_functions import *
 
@@ -11,6 +9,7 @@ from esxi_vm_functions import *
 ConfigData = setup_config()
 NAME = ""
 LOG = ConfigData['LOG']
+writeLog = ConfigData['writeLog']
 isDryRun = ConfigData['isDryRun']
 isVerbose = ConfigData['isVerbose']
 isSummary = ConfigData['isSummary']
@@ -47,25 +46,27 @@ parser = argparse.ArgumentParser(description='ESXi Create VM utility.')
 
 parser.add_argument('-d', '--dry', dest='isDryRunarg', action='store_true',
                     help="Enable Dry Run mode  (" + str(isDryRun) + ")")
-parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (" + str(HOST) + ")")
-parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number  (" + str(PORT) + ")")
-parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
-parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password  (*****)")
-parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key (path to private key)")
-parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name")
-parser.add_argument("-c", "--cpu", dest='CPU', type=int, help="Number of vCPUS  (" + str(CPU) + ")")
-parser.add_argument("-m", "--mem", type=int, help="Memory in GB  (" + str(MEM) + ")")
-parser.add_argument("-v", "--vdisk", dest='HDISK', type=str, help="Size of virt hdisk  (" + str(HDISK) + ")")
-parser.add_argument("-i", "--iso", dest='ISO', type=str, help="CDROM ISO Path | None  (" + str(ISO) + ")")
-parser.add_argument("-N", "--net", dest='NET', type=str, help="Network Interface | None  (" + str(NET) + ")")
+parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP ({})".format(HOST))
+parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number ({})".format(PORT))
+parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username ({})".format(USER))
+parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password (*****)")
+parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host path to private key ({})".format(KEY))
+parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name ()".format(NAME))
+parser.add_argument("-c", "--cpu", dest='CPU', type=int, help="Number of vCPUS ({})".format(CPU))
+parser.add_argument("-m", "--mem", type=int, help="Memory in GB ({})".format(MEM))
+parser.add_argument("-v", "--vdisk", dest='HDISK', type=str, help="Size of virt hdisk ({})".format(HDISK))
+parser.add_argument("-i", "--iso", dest='ISO', type=str, help="CDROM ISO Path | None ({})".format(ISO))
+parser.add_argument("-N", "--net", dest='NET', type=str, help="Network Interface | None ({})".format(NET))
 parser.add_argument("-M", "--mac", dest='MAC', type=str, help="MAC address")
-parser.add_argument("-S", "--store", dest='STORE', type=str, help="vmfs Store | LeastUsed  (" + str(STORE) + ")")
-parser.add_argument("-g", "--guestos", dest='GUESTOS', type=str, help="Guest OS. (" + str(GUESTOS) + ")")
-parser.add_argument("-o", "--options", dest='VMXOPTS', type=str, default='NIL', help="Comma list of VMX Options.")
+parser.add_argument("-S", "--store", dest='STORE', type=str, help="vmfs Store | LeastUsed ({})".format(STORE))
+parser.add_argument("-g", "--guestos", dest='GUESTOS', type=str, help="Guest OS ({})".format(GUESTOS))
+parser.add_argument("-o", "--options", dest='VMXOPTS', type=str, default='NIL', help="Comma list of VMX options")
 parser.add_argument('-V', '--verbose', dest='isVerbosearg', action='store_true',
-                    help="Enable Verbose mode  (" + str(isVerbose) + ")")
+                    help="Enable Verbose mode ({})".format(isVerbose))
+parser.add_argument('-f', '--logfile', dest='LOG', type=str, help='Path to the log file ({})'.format(LOG))
+parser.add_argument('-l', '--log', dest='writeLog', action='store_true', help='Write to log file ({})'.format(writeLog))
 parser.add_argument('--summary', dest='isSummaryarg', action='store_true',
-                    help="Display Summary  (" + str(isSummary) + ")")
+                    help="Display Summary ({})".format(isSummary))
 parser.add_argument("-u", "--updateDefaults", dest='UPDATE', action='store_true',
                     help="Update Default VM settings stored in ~/.esxi-vm.yml")
 
@@ -76,6 +77,10 @@ if args.isDryRunarg:
     isDryRun = True
 if args.isVerbosearg:
     isVerbose = True
+if args.LOG:
+    LOG = args.LOG
+if args.LOG or args.writeLog:
+    writeLog = True
 if args.isSummaryarg:
     isSummary = True
 if args.HOST:
@@ -201,8 +206,7 @@ if ISO != "":
             (stdin, stdout, stderr) = exec_ssh_command("Search ISO image",
                                                        "find /vmfs/volumes/ -type f -name {}".format(ISO) +
                                                        " -exec sh -c 'echo $1; kill $PPID' sh {} 2>/dev/null \;",
-                                                       ssh, isVerbose
-            )
+                                                       ssh, isVerbose)
             FoundISOPath = str(stdout.readlines()[0]).strip('\n')
             if isVerbose:
                 print("FoundISOPath: {}".format(FoundISOPath))
@@ -413,11 +417,13 @@ if ErrorMessages != "":
     LogOutput += '"Error Message":"{}",'.format(ErrorMessages)
 LogOutput += '"Result":"{}","Completion Time":"{}"'.format(Result, the_current_date_time())
 LogOutput += '}\n'
-try:
-    with open(LOG, "a") as FD:
-        FD.write(LogOutput)
-except Exception as e:
-    print("Error writing to log file: {}".format(LOG))
+
+if writeLog:
+    try:
+        with open(LOG, "a") as FD:
+            FD.write(LogOutput)
+    except Exception as e:
+        print("Error writing to log file: {}".format(LOG))
 
 if isSummary:
     if isDryRun:

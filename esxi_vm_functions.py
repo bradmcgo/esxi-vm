@@ -6,6 +6,7 @@ import datetime                   # For current Date/Time
 import re                         # For regex
 import paramiko                   # For remote ssh
 
+
 def setup_config():
 
     #
@@ -15,6 +16,7 @@ def setup_config():
 
         #   Your logfile
         LOG=os.path.expanduser("~") + "/esxi-vm.log",
+        writeLog=False,  # By default, do NOT write logs
 
         #  Enable/Disable dryrun by default
         isDryRun=False,

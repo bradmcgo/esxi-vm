@@ -3,8 +3,6 @@
 
 import argparse                   # Argument parser
 import time
-import re                         # For regex
-import paramiko                   # For remote ssh
 
 from esxi_vm_functions import *
 
@@ -12,6 +10,7 @@ from esxi_vm_functions import *
 ConfigData = setup_config()
 NAME = ""
 LOG = ConfigData['LOG']
+writeLog = ConfigData['writeLog']
 isDryRun = ConfigData['isDryRun']
 isVerbose = ConfigData['isVerbose']
 isSummary = ConfigData['isSummary']
@@ -38,24 +37,29 @@ DSSTORE = ""
 #
 #      Process Arguments
 #
-parser = argparse.ArgumentParser(description='ESXi Create VM utility.')
+parser = argparse.ArgumentParser(description='ESXi Destroy VM utility.')
 
-parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP  (" + str(HOST) + ")")
-parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number  (" + str(PORT) + ")")
-parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username  (" + str(USER) + ")")
-parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password  (*****)")
-parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host connection key (path to private key)")
-parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name")
+parser.add_argument("-H", "--Host", dest='HOST', type=str, help="ESXi Host/IP ({})".format(HOST))
+parser.add_argument("-T", "--Port", dest='PORT', type=int, help="ESXi Port number ({})".format(PORT))
+parser.add_argument("-U", "--User", dest='USER', type=str, help="ESXi Host username ({})".format(USER))
+parser.add_argument("-P", "--Password", dest='PASSWORD', type=str, help="ESXi Host password (*****)")
+parser.add_argument("-K", "--Key", dest='KEY', type=str, help="ESXi Host path to private key ({})".format(KEY))
+parser.add_argument("-n", "--name", dest='NAME', type=str, help="VM name ()".format(NAME))
 parser.add_argument('-V', '--verbose', dest='isVerbosearg', action='store_true',
-                    help="Enable Verbose mode  (" + str(isVerbose) + ")")
+                    help="Enable Verbose mode ({})".format(isVerbose))
+parser.add_argument('-f', '--logfile', dest='LOG', type=str, help='Path to the log file ({})'.format(LOG))
+parser.add_argument('-l', '--log', dest='writeLog', action='store_true', help='Write to log file ({})'.format(writeLog))
 parser.add_argument('--summary', dest='isSummaryarg', action='store_true',
-                    help="Display Summary  (" + str(isSummary) + ")")
-
+                    help="Display Summary ({})".format(isSummary))
 
 args = parser.parse_args()
 
 if args.isVerbosearg:
     isVerbose = True
+if args.LOG:
+    LOG = args.LOG
+if args.LOG or args.writeLog:
+    writeLog = True
 if args.isSummaryarg:
     isSummary = True
 if args.HOST:
@@ -106,8 +110,8 @@ except Exception as e:
 try:
     (stdin, stdout, stderr) = \
         exec_ssh_command("Get List of Volumes",
-                             "esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7",
-                             ssh, isVerbose)
+                         "esxcli storage filesystem list |grep '/vmfs/volumes/.*true  VMFS' |sort -nk7",
+                         ssh, isVerbose)
     type(stdin)
     VOLUMES = {}
     for line in stdout.readlines():
@@ -172,11 +176,12 @@ if ErrorMessages != "":
 LogOutput += '"Result":"{}","Completion Time":"{}"'.format(Result, the_current_date_time())
 LogOutput += '}\n'
 
-try:
-    with open(LOG, "a") as FD:
-        FD.write(LogOutput)
-except Exception as e:
-    print("Error writing to log file: {}".format(e))
+if writeLog:
+    try:
+        with open(LOG, "a") as FD:
+            FD.write(LogOutput)
+    except Exception as e:
+        print("Error writing to log file: {}".format(e))
 
 if isSummary:
     if isVerbose:
