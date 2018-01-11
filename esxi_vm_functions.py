@@ -110,7 +110,7 @@ def get_esxi_version(ssh, verbose):
         (stdin, stdout, stderr) = exec_ssh_command("Get ESXi version", "esxcli system version get |grep Version",
                                                    ssh, verbose)
         if re.match("Version", str(stdout.readlines())) is not None:
-            print("Unable to determine if this is a ESXi Host: {}, port: {}, username: {}".format(HOST, PORT, USER))
+            print("Unable to determine if this is a ESXi Host")
             sys.exit(1)
 
     except Exception as e:
@@ -123,7 +123,10 @@ def connect_to_esxi(host, port, user, password, key, verbose):
     try:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(host, port=port, username=user, password=password, key_filename=key)
+        if key:
+            ssh.connect(host, port=port, username=user, key_filename=key)
+        else:
+            ssh.connect(host, port=port, username=user, password=password)
         get_esxi_version(ssh, verbose)
         return ssh
     except Exception as e:
