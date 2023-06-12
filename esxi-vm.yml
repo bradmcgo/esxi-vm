@@ -1,0 +1,36 @@
+CPU: <CPU size here>
+DISKFORMAT: thin
+GUESTOS: windows2019srv-64
+HDISK: <disk size here>
+HOST: <host IP here>
+ISO: null
+KEY: null
+LOG: /home/user/esxi-vm.log
+MEM: 4
+NET: <VM network here>
+PASSWORD: null
+PORT: 22
+STORE: <datastore here>
+USER: root
+VIRTDEV: pvscsi
+VMXOPTS:
+- config.version = 8
+- virtualHW.version = 20
+- vmci0.present = TRUE
+- scsi0.present = TRUE
+- sata0.present = TRUE
+- usb_xhci.present = TRUE
+- scsi0.virtualDev = lsisas1068
+- sata0:0.deviceType = cdrom-image
+- sata0:0.fileName = /vmfs/volumes/path_to_iso_here
+- sata0:0.present = TRUE
+- usb_xhci:4.present = TRUE
+- usb_xhci:4.deviceType = hid
+- usb_xhci:4.port = 4
+- usb_xhci:4.parent = -1
+- virtualHW.productCompatibility = hosted
+- floppy0.present = FALSE
+isDryRun: false
+isSummary: false
+isVerbose: false
+writeLog: false
